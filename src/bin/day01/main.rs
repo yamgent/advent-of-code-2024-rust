@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/01/input.txt");
 
 fn p1(input: &str) -> String {
@@ -30,8 +32,30 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    let (left_list, right_map) =
+        input
+            .trim()
+            .lines()
+            .fold((vec![], HashMap::new()), |mut acc, line| {
+                let values = line.split_whitespace().collect::<Vec<_>>();
+
+                if values.len() != 2 {
+                    panic!("Expect two values per line, but {line} is not");
+                }
+
+                acc.0.push(values[0].parse::<i32>().expect("not a number"));
+
+                let right_number = values[1].parse::<i32>().expect("not a number");
+                *(acc.1.entry(right_number).or_insert(0)) += 1;
+
+                acc
+            });
+
+    left_list
+        .into_iter()
+        .map(|left_number| left_number * (right_map.get(&left_number).copied().unwrap_or_default()))
+        .sum::<i32>()
+        .to_string()
 }
 
 fn main() {
@@ -62,12 +86,11 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(p2(SAMPLE_INPUT), "31");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "19437052");
     }
 }
