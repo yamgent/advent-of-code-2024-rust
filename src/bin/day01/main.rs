@@ -2,54 +2,46 @@ use std::collections::HashMap;
 
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/01/input.txt");
 
+fn read_input(input: &str) -> (Vec<i32>, Vec<i32>) {
+    input
+        .trim()
+        .lines()
+        .fold((vec![], vec![]), |mut acc, line| {
+            let values = line.split_whitespace().collect::<Vec<_>>();
+
+            if values.len() != 2 {
+                panic!("Expect two values per line, but {line} is not");
+            }
+
+            acc.0.push(values[0].parse().expect("not a number"));
+            acc.1.push(values[1].parse().expect("not a number"));
+
+            acc
+        })
+}
+
 fn p1(input: &str) -> String {
-    let (mut left_list, mut right_list) =
-        input
-            .trim()
-            .lines()
-            .fold((vec![], vec![]), |mut acc, line| {
-                let values = line.split_whitespace().collect::<Vec<_>>();
-
-                if values.len() != 2 {
-                    panic!("Expect two values per line, but {line} is not");
-                }
-
-                acc.0.push(values[0].parse::<i32>().expect("not a number"));
-                acc.1.push(values[1].parse::<i32>().expect("not a number"));
-
-                acc
-            });
+    let (mut left_list, mut right_list) = read_input(input);
 
     left_list.sort_unstable();
     right_list.sort_unstable();
 
     left_list
         .into_iter()
-        .zip(right_list.into_iter())
+        .zip(right_list)
         .map(|(left, right)| left.max(right) - left.min(right))
         .sum::<i32>()
         .to_string()
 }
 
 fn p2(input: &str) -> String {
-    let (left_list, right_map) =
-        input
-            .trim()
-            .lines()
-            .fold((vec![], HashMap::new()), |mut acc, line| {
-                let values = line.split_whitespace().collect::<Vec<_>>();
-
-                if values.len() != 2 {
-                    panic!("Expect two values per line, but {line} is not");
-                }
-
-                acc.0.push(values[0].parse::<i32>().expect("not a number"));
-
-                let right_number = values[1].parse::<i32>().expect("not a number");
-                *(acc.1.entry(right_number).or_insert(0)) += 1;
-
-                acc
-            });
+    let (left_list, right_list) = read_input(input);
+    let right_map = right_list
+        .into_iter()
+        .fold(HashMap::new(), |mut acc, number| {
+            *(acc.entry(number).or_insert(0)) += 1;
+            acc
+        });
 
     left_list
         .into_iter()
