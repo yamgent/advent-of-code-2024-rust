@@ -6,16 +6,19 @@ fn read_input(input: &str) -> (Vec<i32>, Vec<i32>) {
     input
         .trim()
         .lines()
+        .map(|line| {
+            let (left, right) = line.trim().split_once("   ").unwrap_or_else(|| {
+                panic!("Expect two values per line with three spaces in between, but {line} is not")
+            });
+
+            (
+                left.parse().expect("not a number"),
+                right.parse().expect("not a number"),
+            )
+        })
         .fold((vec![], vec![]), |mut acc, line| {
-            let values = line.split_whitespace().collect::<Vec<_>>();
-
-            if values.len() != 2 {
-                panic!("Expect two values per line, but {line} is not");
-            }
-
-            acc.0.push(values[0].parse().expect("not a number"));
-            acc.1.push(values[1].parse().expect("not a number"));
-
+            acc.0.push(line.0);
+            acc.1.push(line.1);
             acc
         })
 }
@@ -29,7 +32,7 @@ fn p1(input: &str) -> String {
     left_list
         .into_iter()
         .zip(right_list)
-        .map(|(left, right)| left.max(right) - left.min(right))
+        .map(|(left, right)| (left - right).abs())
         .sum::<i32>()
         .to_string()
 }
@@ -45,7 +48,7 @@ fn p2(input: &str) -> String {
 
     left_list
         .into_iter()
-        .map(|left_number| left_number * (right_map.get(&left_number).copied().unwrap_or_default()))
+        .map(|left_number| left_number * (*right_map.get(&left_number).unwrap_or(&0)))
         .sum::<i32>()
         .to_string()
 }
