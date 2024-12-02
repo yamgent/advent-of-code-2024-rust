@@ -17,7 +17,7 @@ fn is_safe_increasing(values: &[i32]) -> bool {
         .iter()
         .zip(values.iter().skip(1))
         .map(|(a, b)| b - a)
-        .all(|diff| diff >= 1 && diff <= 3)
+        .all(|diff| (1..=3).contains(&diff))
 }
 
 fn is_safe_decreasing(values: &[i32]) -> bool {
@@ -25,7 +25,7 @@ fn is_safe_decreasing(values: &[i32]) -> bool {
         .iter()
         .zip(values.iter().skip(1))
         .map(|(a, b)| a - b)
-        .all(|diff| diff >= 1 && diff <= 3)
+        .all(|diff| (1..=3).contains(&diff))
 }
 
 fn p1(input: &str) -> String {
