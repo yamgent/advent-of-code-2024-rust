@@ -29,8 +29,29 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    input
+        .trim()
+        .lines()
+        .map(|line| {
+            line.split_whitespace()
+                .map(|val| val.parse::<i32>().expect("a number"))
+                .collect::<Vec<_>>()
+        })
+        .filter(|line| {
+            is_safe_increasing(line)
+                || is_safe_decreasing(line)
+                || (0..line.len()).any(|skip_idx| {
+                    let new_values = line
+                        .iter()
+                        .enumerate()
+                        .filter(|(idx, _)| *idx != skip_idx)
+                        .map(|(_, val)| *val)
+                        .collect::<Vec<_>>();
+                    is_safe_increasing(&new_values) || is_safe_decreasing(&new_values)
+                })
+        })
+        .count()
+        .to_string()
 }
 
 fn main() {
@@ -61,12 +82,11 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(p2(SAMPLE_INPUT), "4");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "476");
     }
 }
