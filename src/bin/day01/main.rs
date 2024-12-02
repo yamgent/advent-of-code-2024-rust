@@ -12,8 +12,8 @@ fn read_input(input: &str) -> (Vec<i32>, Vec<i32>) {
             });
 
             (
-                left.parse().expect("not a number"),
-                right.parse().expect("not a number"),
+                left.parse().expect("a number"),
+                right.parse().expect("a number"),
             )
         })
         .fold((vec![], vec![]), |mut acc, line| {
