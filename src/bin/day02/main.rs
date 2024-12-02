@@ -1,5 +1,17 @@
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/02/input.txt");
 
+fn parse_input(input: &str) -> Vec<Vec<i32>> {
+    input
+        .trim()
+        .lines()
+        .map(|line| {
+            line.split_whitespace()
+                .map(|val| val.parse::<i32>().expect("a number"))
+                .collect::<Vec<_>>()
+        })
+        .collect()
+}
+
 fn is_safe_increasing(values: &[i32]) -> bool {
     values
         .iter()
@@ -15,33 +27,21 @@ fn is_safe_decreasing(values: &[i32]) -> bool {
 }
 
 fn p1(input: &str) -> String {
-    input
-        .trim()
-        .lines()
-        .map(|line| {
-            line.split_whitespace()
-                .map(|val| val.parse::<i32>().expect("a number"))
-                .collect::<Vec<_>>()
-        })
-        .filter(|line| is_safe_increasing(line) || is_safe_decreasing(line))
+    parse_input(input)
+        .into_iter()
+        .filter(|values| is_safe_increasing(values) || is_safe_decreasing(values))
         .count()
         .to_string()
 }
 
 fn p2(input: &str) -> String {
-    input
-        .trim()
-        .lines()
-        .map(|line| {
-            line.split_whitespace()
-                .map(|val| val.parse::<i32>().expect("a number"))
-                .collect::<Vec<_>>()
-        })
-        .filter(|line| {
-            is_safe_increasing(line)
-                || is_safe_decreasing(line)
-                || (0..line.len()).any(|skip_idx| {
-                    let new_values = line
+    parse_input(input)
+        .into_iter()
+        .filter(|values| {
+            is_safe_increasing(values)
+                || is_safe_decreasing(values)
+                || (0..values.len()).any(|skip_idx| {
+                    let new_values = values
                         .iter()
                         .enumerate()
                         .filter(|(idx, _)| *idx != skip_idx)
