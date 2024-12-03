@@ -15,8 +15,28 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    let re = Regex::new(r"mul\((\d+),(\d+)\)|do\(\)|don't\(\)").expect("valid regex");
+
+    re.captures_iter(input)
+        .fold((0i64, true), |(mut acc, enabled), captures| {
+            let matched = &captures[0];
+
+            if matched == "do()" {
+                (acc, true)
+            } else if matched == "don't()" {
+                (acc, false)
+            } else {
+                if enabled {
+                    let a = &captures[1];
+                    let b = &captures[2];
+                    acc +=
+                        a.parse::<i64>().expect("a number") * b.parse::<i64>().expect("a number");
+                }
+                (acc, enabled)
+            }
+        })
+        .0
+        .to_string()
 }
 
 fn main() {
@@ -28,12 +48,12 @@ fn main() {
 mod tests {
     use super::*;
 
-    const SAMPLE_INPUT: &str =
-        r"xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))";
-
     #[test]
     fn test_p1_sample() {
-        assert_eq!(p1(SAMPLE_INPUT), "161");
+        assert_eq!(
+            p1("xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))"),
+            "161"
+        );
     }
 
     #[test]
@@ -43,12 +63,14 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(
+            p2("xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))"),
+            "48"
+        );
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "93465710");
     }
 }
