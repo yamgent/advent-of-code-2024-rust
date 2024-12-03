@@ -1,38 +1,58 @@
-use regex::Regex;
+use regex::{Captures, Regex};
 
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/03/input.txt");
 
 fn p1(input: &str) -> String {
-    let re = Regex::new(r"mul\((\d+),(\d+)\)").expect("valid regex");
-
-    re.captures_iter(input)
-        .map(|c| c.extract())
-        .map(|(_, [a, b])| {
-            a.parse::<i64>().expect("a number") * b.parse::<i64>().expect("a number")
+    Regex::new(r"mul\((\d+),(\d+)\)")
+        .expect("valid regex")
+        .captures_iter(input)
+        .map(|c| c.extract::<2>())
+        .map(|(_, values)| {
+            values
+                .iter()
+                .map(|v| v.parse::<i64>().expect("a number"))
+                .product::<i64>()
         })
         .sum::<i64>()
         .to_string()
 }
 
+enum Statement {
+    Multiply(i64, i64),
+    Do,
+    Dont,
+}
+
+impl Statement {
+    fn parse(captures: Captures) -> Self {
+        let text = &captures[0];
+
+        match text {
+            "do()" => Statement::Do,
+            "don't()" => Statement::Dont,
+            _ => {
+                let a = &captures[1].parse::<i64>().expect("a number");
+                let b = &captures[2].parse::<i64>().expect("a number");
+                Statement::Multiply(*a, *b)
+            }
+        }
+    }
+}
+
 fn p2(input: &str) -> String {
-    let re = Regex::new(r"mul\((\d+),(\d+)\)|do\(\)|don't\(\)").expect("valid regex");
-
-    re.captures_iter(input)
-        .fold((0i64, true), |(mut acc, enabled), captures| {
-            let matched = &captures[0];
-
-            if matched == "do()" {
-                (acc, true)
-            } else if matched == "don't()" {
-                (acc, false)
-            } else {
+    Regex::new(r"mul\((\d+),(\d+)\)|do\(\)|don't\(\)")
+        .expect("valid regex")
+        .captures_iter(input)
+        .map(Statement::parse)
+        .fold((0i64, true), |(acc, enabled), statement| match statement {
+            Statement::Do => (acc, true),
+            Statement::Dont => (acc, false),
+            Statement::Multiply(a, b) => {
                 if enabled {
-                    let a = &captures[1];
-                    let b = &captures[2];
-                    acc +=
-                        a.parse::<i64>().expect("a number") * b.parse::<i64>().expect("a number");
+                    (acc + a * b, enabled)
+                } else {
+                    (acc, enabled)
                 }
-                (acc, enabled)
             }
         })
         .0
