@@ -89,8 +89,47 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    let grid = input
+        .trim()
+        .lines()
+        .map(|line| line.trim().chars().collect::<Vec<_>>())
+        .collect::<Vec<_>>();
+
+    fn get(grid: &Vec<Vec<char>>, pos: Coord) -> char {
+        if pos.0 >= 0 && pos.0 < grid.len() as i64 && pos.1 >= 0 && pos.1 < grid[0].len() as i64 {
+            grid[pos.0 as usize][pos.1 as usize]
+        } else {
+            ' '
+        }
+    }
+
+    (1..grid.len() - 1)
+        .map(|y| {
+            (1..grid[y].len() - 1)
+                .filter(|x| {
+                    let coord = Coord(*x as i64, y as i64);
+
+                    if get(&grid, coord) == 'A' {
+                        let collect = [
+                            coord.upleft(),
+                            coord.upright(),
+                            coord.downright(),
+                            coord.downleft(),
+                        ]
+                        .into_iter()
+                        .map(|coord| get(&grid, coord))
+                        .collect::<String>();
+                        ["MMSS", "SMMS", "SSMM", "MSSM"]
+                            .into_iter()
+                            .any(|entry| entry == collect)
+                    } else {
+                        false
+                    }
+                })
+                .count()
+        })
+        .sum::<usize>()
+        .to_string()
 }
 
 fn main() {
@@ -127,12 +166,11 @@ MXMXAXMASX
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(p2(SAMPLE_INPUT), "9");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "1858");
     }
 }
