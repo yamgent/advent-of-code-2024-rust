@@ -1,5 +1,46 @@
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/04/input.txt");
 
+struct Grid {
+    cells: Vec<Vec<char>>,
+}
+
+impl Grid {
+    fn parse(input: &str) -> Self {
+        Self {
+            cells: input
+                .trim()
+                .lines()
+                .map(|line| line.trim().chars().collect())
+                .collect(),
+        }
+    }
+
+    fn get(&self, pos: Coord) -> char {
+        const INVALID: char = ' ';
+
+        if pos.0 >= 0 && pos.1 >= 0 {
+            let x = pos.0 as usize;
+            let y = pos.1 as usize;
+
+            if y < self.cells.len() && x < self.cells[y].len() {
+                self.cells[y][x]
+            } else {
+                INVALID
+            }
+        } else {
+            INVALID
+        }
+    }
+
+    fn height(&self) -> usize {
+        self.cells.len()
+    }
+
+    fn width(&self) -> usize {
+        self.cells[0].len()
+    }
+}
+
 #[derive(Clone, Copy)]
 struct Coord(i64, i64);
 
@@ -38,23 +79,11 @@ impl Coord {
 }
 
 fn p1(input: &str) -> String {
-    let grid = input
-        .trim()
-        .lines()
-        .map(|line| line.trim().chars().collect::<Vec<_>>())
-        .collect::<Vec<_>>();
+    let grid = Grid::parse(input);
 
-    fn get(grid: &Vec<Vec<char>>, pos: Coord) -> char {
-        if pos.0 >= 0 && pos.0 < grid.len() as i64 && pos.1 >= 0 && pos.1 < grid[0].len() as i64 {
-            grid[pos.0 as usize][pos.1 as usize]
-        } else {
-            ' '
-        }
-    }
-
-    (0..grid.len())
+    (0..grid.height())
         .map(|y| {
-            (0..grid[y].len())
+            (0..grid.width())
                 .map(|x| {
                     let coord = Coord(x as i64, y as i64);
                     [
@@ -67,19 +96,18 @@ fn p1(input: &str) -> String {
                         Coord::downleft,
                         Coord::downright,
                     ]
-                    .map(|dir| {
-                        (0..4)
-                            .fold((vec![], coord), |(mut acc, coord), _| {
-                                acc.push(get(&grid, coord));
-                                (acc, dir(coord))
+                    .into_iter()
+                    .filter(|dir| {
+                        (0..3)
+                            .fold(vec![coord], |mut acc, _| {
+                                acc.push(dir(*acc.last().expect("not empty")));
+                                acc
                             })
-                            .0
                             .into_iter()
+                            .map(|coord| grid.get(coord))
                             .collect::<String>()
                             == "XMAS"
                     })
-                    .into_iter()
-                    .filter(|x| *x)
                     .count()
                 })
                 .sum::<usize>()
@@ -89,39 +117,27 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let grid = input
-        .trim()
-        .lines()
-        .map(|line| line.trim().chars().collect::<Vec<_>>())
-        .collect::<Vec<_>>();
+    let grid = Grid::parse(input);
 
-    fn get(grid: &Vec<Vec<char>>, pos: Coord) -> char {
-        if pos.0 >= 0 && pos.0 < grid.len() as i64 && pos.1 >= 0 && pos.1 < grid[0].len() as i64 {
-            grid[pos.0 as usize][pos.1 as usize]
-        } else {
-            ' '
-        }
-    }
-
-    (1..grid.len() - 1)
+    (1..grid.height() - 1)
         .map(|y| {
-            (1..grid[y].len() - 1)
+            (1..grid.width() - 1)
                 .filter(|x| {
                     let coord = Coord(*x as i64, y as i64);
 
-                    if get(&grid, coord) == 'A' {
-                        let collect = [
+                    if grid.get(coord) == 'A' {
+                        let ring = [
                             coord.upleft(),
                             coord.upright(),
                             coord.downright(),
                             coord.downleft(),
                         ]
                         .into_iter()
-                        .map(|coord| get(&grid, coord))
+                        .map(|coord| grid.get(coord))
                         .collect::<String>();
                         ["MMSS", "SMMS", "SSMM", "MSSM"]
                             .into_iter()
-                            .any(|entry| entry == collect)
+                            .any(|candidate| ring == candidate)
                     } else {
                         false
                     }
