@@ -2,7 +2,6 @@ use std::collections::{HashMap, HashSet};
 
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/05/input.txt");
 
-#[derive(Clone)]
 struct Graph {
     children: HashMap<usize, HashSet<usize>>,
 }
@@ -57,13 +56,12 @@ fn is_valid_ordering(rules: &Graph, update: &[usize]) -> bool {
     let mut seen = HashSet::new();
 
     let found_violated_order = update.iter().any(|page| {
-        if let Some(children) = rules.children.get(page) {
-            if children.iter().any(|child_page| seen.contains(child_page)) {
-                return true;
-            }
-        }
         seen.insert(page);
-        false
+        rules
+            .children
+            .get(page)
+            .map(|children| children.iter().any(|child_page| seen.contains(child_page)))
+            .unwrap_or(false)
     });
 
     !found_violated_order
@@ -84,7 +82,7 @@ fn p1(input: &str) -> String {
         .to_string()
 }
 
-fn fix_page_orderings(rules: &Graph, update: &[usize]) -> Vec<usize> {
+fn fix_page_ordering(rules: &Graph, update: &[usize]) -> Vec<usize> {
     let mut result = update.to_vec();
 
     let empty_hashset = HashSet::new();
@@ -92,17 +90,18 @@ fn fix_page_orderings(rules: &Graph, update: &[usize]) -> Vec<usize> {
     for i in 0..result.len() {
         let children = rules.children.get(&result[i]).unwrap_or(&empty_hashset);
 
-        if let Some(violate_idx) = (0..i)
-            .rev()
-            .fold(None, |smallest_violate_idx_so_far, subidx| {
-                if children.contains(&result[subidx]) {
-                    Some(subidx)
-                } else {
-                    smallest_violate_idx_so_far
-                }
-            })
+        if let Some(smallest_violate_idx) =
+            (0..i)
+                .rev()
+                .fold(None, |smallest_violate_idx_so_far, inspect_idx| {
+                    if children.contains(&result[inspect_idx]) {
+                        Some(inspect_idx)
+                    } else {
+                        smallest_violate_idx_so_far
+                    }
+                })
         {
-            (violate_idx..i).rev().for_each(|idx| {
+            (smallest_violate_idx..i).rev().for_each(|idx| {
                 result.swap(idx, idx + 1);
             });
         }
@@ -118,7 +117,7 @@ fn p2(input: &str) -> String {
     updates
         .into_iter()
         .filter(|update| !is_valid_ordering(&rules, update))
-        .map(|update| fix_page_orderings(&rules, &update))
+        .map(|update| fix_page_ordering(&rules, &update))
         .map(|update| get_middle_page(&update))
         .sum::<usize>()
         .to_string()
