@@ -85,7 +85,7 @@ fn p1(input: &str) -> String {
 }
 
 fn fix_page_orderings(rules: &Graph, update: &[usize]) -> Vec<usize> {
-    let mut result = update.iter().copied().collect::<Vec<_>>();
+    let mut result = update.to_vec();
 
     let empty_hashset = HashSet::new();
 
@@ -103,10 +103,7 @@ fn fix_page_orderings(rules: &Graph, update: &[usize]) -> Vec<usize> {
             })
         {
             (violate_idx..i).rev().for_each(|idx| {
-                let next_idx = idx + 1;
-                let temp = result[next_idx];
-                result[next_idx] = result[idx];
-                result[idx] = temp;
+                result.swap(idx, idx + 1);
             });
         }
     }
