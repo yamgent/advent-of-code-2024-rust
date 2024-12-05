@@ -84,9 +84,47 @@ fn p1(input: &str) -> String {
         .to_string()
 }
 
+fn fix_page_orderings(rules: &Graph, update: &[usize]) -> Vec<usize> {
+    let mut result = update.iter().copied().collect::<Vec<_>>();
+
+    let empty_hashset = HashSet::new();
+
+    for i in 0..result.len() {
+        let children = rules.children.get(&result[i]).unwrap_or(&empty_hashset);
+
+        if let Some(violate_idx) = (0..i)
+            .rev()
+            .fold(None, |smallest_violate_idx_so_far, subidx| {
+                if children.contains(&result[subidx]) {
+                    Some(subidx)
+                } else {
+                    smallest_violate_idx_so_far
+                }
+            })
+        {
+            (violate_idx..i).rev().for_each(|idx| {
+                let next_idx = idx + 1;
+                let temp = result[next_idx];
+                result[next_idx] = result[idx];
+                result[idx] = temp;
+            });
+        }
+    }
+
+    assert!(is_valid_ordering(rules, &result));
+    result
+}
+
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    let (rules, updates) = parse_input(input);
+
+    updates
+        .into_iter()
+        .filter(|update| !is_valid_ordering(&rules, update))
+        .map(|update| fix_page_orderings(&rules, &update))
+        .map(|update| get_middle_page(&update))
+        .sum::<usize>()
+        .to_string()
 }
 
 fn main() {
@@ -140,12 +178,11 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(p2(SAMPLE_INPUT), "123");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "6085");
     }
 }
