@@ -15,60 +15,71 @@ impl Graph {
     }
 
     fn connect(&mut self, from: usize, to: usize) {
-        self.children
-            .entry(from)
-            .or_default()
-            .insert(to);
+        self.children.entry(from).or_default().insert(to);
     }
 }
 
-fn p1(input: &str) -> String {
+fn parse_input(input: &str) -> (Graph, Vec<Vec<usize>>) {
     let (rules, updates) = input
         .trim()
         .split_once("\n\n")
         .expect("input to have two sections as described in problem");
 
-    let rules = rules
-        .trim()
-        .lines()
-        .map(|line| line.split_once("|").expect("input to be of format a|b"))
-        .map(|(parent, child)| {
-            (
-                parent.parse::<usize>().expect("positive integer"),
-                child.parse::<usize>().expect("positive integer"),
-            )
-        })
-        .fold(Graph::new(), |mut graph, (parent, child)| {
-            graph.connect(parent, child);
-            graph
-        });
+    (
+        rules
+            .trim()
+            .lines()
+            .map(|line| line.split_once("|").expect("input to be of format a|b"))
+            .map(|(parent, child)| {
+                (
+                    parent.parse().expect("positive integer"),
+                    child.parse().expect("positive integer"),
+                )
+            })
+            .fold(Graph::new(), |mut graph, (parent, child)| {
+                graph.connect(parent, child);
+                graph
+            }),
+        updates
+            .trim()
+            .lines()
+            .map(|update| {
+                update
+                    .split(",")
+                    .map(|page| page.parse().expect("positive integer"))
+                    .collect()
+            })
+            .collect(),
+    )
+}
+
+fn is_valid_ordering(rules: &Graph, update: &[usize]) -> bool {
+    let mut seen = HashSet::new();
+
+    let found_violated_order = update.iter().any(|page| {
+        if let Some(children) = rules.children.get(page) {
+            if children.iter().any(|child_page| seen.contains(child_page)) {
+                return true;
+            }
+        }
+        seen.insert(page);
+        false
+    });
+
+    !found_violated_order
+}
+
+fn get_middle_page(update: &[usize]) -> usize {
+    *update.get(update.len() / 2).unwrap()
+}
+
+fn p1(input: &str) -> String {
+    let (rules, updates) = parse_input(input);
 
     updates
-        .trim()
-        .lines()
-        .map(|update| {
-            update
-                .split(",")
-                .map(|page| page.parse::<usize>().expect("positive integer"))
-                .collect::<Vec<_>>()
-        })
-        .filter(|update| {
-            let mut seen = HashSet::new();
-
-            !update.iter().any(|page| {
-                if let Some(children) = rules.children.get(page) {
-                    if children.iter().any(|child_page| seen.contains(child_page)) {
-                        return true;
-                    }
-                }
-                seen.insert(page);
-                false
-            })
-        })
-        .map(|update| {
-            let mid = update.len() / 2;
-            *update.get(mid).unwrap()
-        })
+        .into_iter()
+        .filter(|update| is_valid_ordering(&rules, update))
+        .map(|update| get_middle_page(&update))
         .sum::<usize>()
         .to_string()
 }
