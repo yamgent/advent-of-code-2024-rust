@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+// input commentary: actual input have cyclic paths, so using topo sort would not work on the
+// actual input for both part 1 and 2
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/05/input.txt");
 
 struct Graph {
