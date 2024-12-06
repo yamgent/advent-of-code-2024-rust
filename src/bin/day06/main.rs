@@ -132,8 +132,17 @@ fn guard_stuck_in_loop(map: &Map) -> bool {
             return true;
         }
 
-        visited.insert(guard);
         updated_guard_pos = guard.advance(map);
+
+        // we don't have to insert EVERY position the guard visited,
+        // only the positions where the guard has to make a turn
+        //
+        // this optimization alone cut the processing time by HALF
+        if let Some(updated_guard_pos) = updated_guard_pos {
+            if updated_guard_pos.pos == guard.pos {
+                visited.insert(guard);
+            }
+        }
     }
 
     false
@@ -191,7 +200,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "brute-force, took 14s on local"]
+    #[ignore = "brute-force, took 7s on local"]
     fn test_p2_actual() {
         assert_eq!(p2(ACTUAL_INPUT), "1753");
     }
