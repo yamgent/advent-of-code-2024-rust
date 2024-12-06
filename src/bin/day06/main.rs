@@ -112,7 +112,7 @@ fn get_guard_p1_path(map: &Map) -> HashSet<Vec2> {
 
     while let Some(guard) = updated_guard_pos {
         visited.insert(guard.pos);
-        updated_guard_pos = guard.advance(&map);
+        updated_guard_pos = guard.advance(map);
     }
 
     visited
@@ -133,7 +133,7 @@ fn guard_stuck_in_loop(map: &Map) -> bool {
         }
 
         visited.insert(guard);
-        updated_guard_pos = guard.advance(&map);
+        updated_guard_pos = guard.advance(map);
     }
 
     false
