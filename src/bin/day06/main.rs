@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use ahash::AHashSet;
 
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/06/input.txt");
 
@@ -62,7 +62,7 @@ impl Guard {
 struct Map {
     bounds: Vec2,
     guard_start: Guard,
-    obstacles: HashSet<Vec2>,
+    obstacles: AHashSet<Vec2>,
 }
 
 impl Map {
@@ -106,8 +106,8 @@ impl Map {
     }
 }
 
-fn get_guard_p1_path(map: &Map) -> HashSet<Vec2> {
-    let mut visited = HashSet::new();
+fn get_guard_p1_path(map: &Map) -> AHashSet<Vec2> {
+    let mut visited = AHashSet::new();
     let mut updated_guard_pos = Some(map.guard_start);
 
     while let Some(guard) = updated_guard_pos {
@@ -124,7 +124,7 @@ fn p1(input: &str) -> String {
 }
 
 fn guard_stuck_in_loop(map: &Map) -> bool {
-    let mut visited = HashSet::new();
+    let mut visited = AHashSet::new();
     let mut updated_guard_pos = Some(map.guard_start);
 
     while let Some(guard) = updated_guard_pos {
@@ -200,7 +200,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "brute-force, took 7s on local"]
+    #[ignore = "brute-force, took 4s on local"]
     fn test_p2_actual() {
         assert_eq!(p2(ACTUAL_INPUT), "1753");
     }
