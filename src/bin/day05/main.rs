@@ -1,7 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-// input commentary: actual input have cyclic paths, so using topo sort would not work on the
-// actual input for both part 1 and 2
+// input commentary: actual input's rulebook have cyclic paths, so using topo sort on the rulebook
+// would not work for both part 1 and 2. However, the updates themselves are specially crafted to
+// not cause a cyclic loop, so it might work on the updates?? never tried though
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/05/input.txt");
 
 struct Graph {
