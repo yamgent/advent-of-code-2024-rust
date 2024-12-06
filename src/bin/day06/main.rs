@@ -5,7 +5,7 @@ const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/06/input.tx
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 struct Vec2(usize, usize);
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 enum Dir {
     Up,
     Down,
@@ -13,7 +13,7 @@ enum Dir {
     Right,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 struct Guard {
     pos: Vec2,
     dir: Dir,
@@ -58,6 +58,7 @@ impl Guard {
     }
 }
 
+#[derive(Clone)]
 struct Map {
     bounds: Vec2,
     guard_start: Guard,
@@ -105,9 +106,7 @@ impl Map {
     }
 }
 
-fn p1(input: &str) -> String {
-    let map = Map::parse_input(input);
-
+fn get_guard_p1_path(map: &Map) -> HashSet<Vec2> {
     let mut visited = HashSet::new();
     let mut updated_guard_pos = Some(map.guard_start);
 
@@ -116,12 +115,42 @@ fn p1(input: &str) -> String {
         updated_guard_pos = guard.advance(&map);
     }
 
-    visited.len().to_string()
+    visited
+}
+
+fn p1(input: &str) -> String {
+    let map = Map::parse_input(input);
+    get_guard_p1_path(&map).len().to_string()
+}
+
+fn guard_stuck_in_loop(map: &Map) -> bool {
+    let mut visited = HashSet::new();
+    let mut updated_guard_pos = Some(map.guard_start);
+
+    while let Some(guard) = updated_guard_pos {
+        if visited.contains(&guard) {
+            return true;
+        }
+
+        visited.insert(guard);
+        updated_guard_pos = guard.advance(&map);
+    }
+
+    false
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    let map = Map::parse_input(input);
+    get_guard_p1_path(&map)
+        .into_iter()
+        .filter(|pos| *pos != map.guard_start.pos)
+        .filter(|pos| {
+            let mut new_map = map.clone();
+            new_map.obstacles.insert(*pos);
+            guard_stuck_in_loop(&new_map)
+        })
+        .count()
+        .to_string()
 }
 
 fn main() {
@@ -158,12 +187,12 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(p2(SAMPLE_INPUT), "6");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
+    #[ignore = "brute-force, took 14s on local"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "1753");
     }
 }
