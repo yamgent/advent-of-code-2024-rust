@@ -1,7 +1,47 @@
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/07/input.txt");
 
 fn total_digits(value: u64) -> usize {
-    value.to_string().len()
+    if value < 10 {
+        1
+    } else if value < 100 {
+        2
+    } else if value < 1_000 {
+        3
+    } else if value < 10_000 {
+        4
+    } else if value < 100_000 {
+        5
+    } else if value < 1_000_000 {
+        6
+    } else if value < 10_000_000 {
+        7
+    } else if value < 100_000_000 {
+        8
+    } else if value < 1_000_000_000 {
+        9
+    } else if value < 10_000_000_000 {
+        10
+    } else if value < 100_000_000_000 {
+        11
+    } else if value < 1_000_000_000_000 {
+        12
+    } else if value < 10_000_000_000_000 {
+        13
+    } else if value < 100_000_000_000_000 {
+        14
+    } else if value < 1_000_000_000_000_000 {
+        15
+    } else if value < 10_000_000_000_000_000 {
+        16
+    } else if value < 100_000_000_000_000_000 {
+        17
+    } else if value < 1_000_000_000_000_000_000 {
+        18
+    } else if value < 10_000_000_000_000_000_000 {
+        19
+    } else {
+        20
+    }
 }
 
 fn equation_solvable(coefficients: &[u64], expected: u64, can_concat: bool) -> bool {
