@@ -1,52 +1,14 @@
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/07/input.txt");
 
-fn solvable(coefficients: &[u64], expected: u64) -> bool {
-    fn compute(coefficients: &[u64], expected: u64, index: usize, acc: u64) -> bool {
-        if index >= coefficients.len() {
-            acc == expected
-        } else {
-            compute(coefficients, expected, index + 1, acc + coefficients[index])
-                || compute(coefficients, expected, index + 1, acc * coefficients[index])
-        }
-    }
-    if coefficients.len() == 0 {
-        expected == 0
-    } else {
-        compute(coefficients, expected, 0, 0)
-    }
-}
-
-fn p1(input: &str) -> String {
-    input
-        .trim()
-        .lines()
-        .map(|line| {
-            let (test_value, coefficients) = line
-                .trim()
-                .split_once(": ")
-                .expect("line to be format xxx: xxx xxx");
-            (
-                test_value.parse::<u64>().expect("a number"),
-                coefficients
-                    .split(" ")
-                    .map(|val| val.parse::<u64>().expect("a number"))
-                    .collect::<Vec<_>>(),
-            )
-        })
-        .filter(|(test_value, coefficients)| solvable(coefficients, *test_value))
-        .map(|(test_value, _)| test_value)
-        .sum::<u64>()
-        .to_string()
-}
-
 fn total_digits(value: u64) -> usize {
     value.to_string().len()
 }
 
-fn solvable_p2(coefficients: &[u64], expected: u64) -> bool {
+fn equation_solvable(coefficients: &[u64], expected: u64, can_concat: bool) -> bool {
     fn compute(
         coefficients: &[u64],
         expected: u64,
+        can_concat: bool,
         expected_digits: usize,
         index: usize,
         acc: u64,
@@ -56,17 +18,21 @@ fn solvable_p2(coefficients: &[u64], expected: u64) -> bool {
         } else if compute(
             coefficients,
             expected,
+            can_concat,
             expected_digits,
             index + 1,
             acc + coefficients[index],
         ) || compute(
             coefficients,
             expected,
+            can_concat,
             expected_digits,
             index + 1,
             acc * coefficients[index],
         ) {
             true
+        } else if !can_concat {
+            false
         } else {
             let left_length = total_digits(acc);
             let right_length = total_digits(coefficients[index]);
@@ -77,6 +43,7 @@ fn solvable_p2(coefficients: &[u64], expected: u64) -> bool {
                 compute(
                     coefficients,
                     expected,
+                    can_concat,
                     expected_digits,
                     index + 1,
                     acc * 10u64.pow(right_length as u32) + coefficients[index],
@@ -84,14 +51,21 @@ fn solvable_p2(coefficients: &[u64], expected: u64) -> bool {
             }
         }
     }
-    if coefficients.len() == 0 {
+    if coefficients.is_empty() {
         expected == 0
     } else {
-        compute(coefficients, expected, total_digits(expected), 0, 0)
+        compute(
+            coefficients,
+            expected,
+            can_concat,
+            total_digits(expected),
+            0,
+            0,
+        )
     }
 }
 
-fn p2(input: &str) -> String {
+fn solve(input: &str, can_concat: bool) -> String {
     input
         .trim()
         .lines()
@@ -108,10 +82,20 @@ fn p2(input: &str) -> String {
                     .collect::<Vec<_>>(),
             )
         })
-        .filter(|(test_value, coefficients)| solvable_p2(coefficients, *test_value))
+        .filter(|(test_value, coefficients)| {
+            equation_solvable(coefficients, *test_value, can_concat)
+        })
         .map(|(test_value, _)| test_value)
         .sum::<u64>()
         .to_string()
+}
+
+fn p1(input: &str) -> String {
+    solve(input, false)
+}
+
+fn p2(input: &str) -> String {
+    solve(input, true)
 }
 
 fn main() {
