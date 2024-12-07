@@ -55,6 +55,11 @@ fn equation_solvable(coefficients: &[u64], expected: u64, can_concat: bool) -> b
     ) -> bool {
         if index >= coefficients.len() {
             acc == expected
+        } else if acc > expected {
+            // only compare acc "greater than" expected, not "equal", because if
+            // the remaining numbers are 0 and/or 1, then can still + or *
+            // to get the answer
+            false
         } else if compute(
             coefficients,
             expected,
