@@ -1,31 +1,64 @@
+use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
+
 use ahash::{HashMap, HashMapExt, HashSet, HashSetExt};
 
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/08/input.txt");
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-struct Coord(i64, i64);
+struct Vec2i(i64, i64);
 
-impl Coord {
-    fn add(&self, other: Coord) -> Coord {
-        Coord(self.0 + other.0, self.1 + other.1)
-    }
+impl Add for Vec2i {
+    type Output = Vec2i;
 
-    fn sub(&self, other: Coord) -> Coord {
-        Coord(self.0 - other.0, self.1 - other.1)
-    }
-
-    fn mul(&self, scalar: i64) -> Coord {
-        Coord(self.0 * scalar, self.1 * scalar)
-    }
-
-    fn in_bounds(&self, bounds: &Coord) -> bool {
-        self.0 >= 0 && self.0 < bounds.0 && self.1 >= 0 && self.1 < bounds.1
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0 + rhs.0, self.1 + rhs.1)
     }
 }
 
+impl AddAssign for Vec2i {
+    fn add_assign(&mut self, rhs: Self) {
+        self.0 += rhs.0;
+        self.1 += rhs.1;
+    }
+}
+
+impl Sub for Vec2i {
+    type Output = Vec2i;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self(self.0 - rhs.0, self.1 - rhs.1)
+    }
+}
+
+impl SubAssign for Vec2i {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.0 -= rhs.0;
+        self.1 -= rhs.1;
+    }
+}
+
+impl Mul<i64> for Vec2i {
+    type Output = Vec2i;
+
+    fn mul(self, rhs: i64) -> Self::Output {
+        Self(self.0 * rhs, self.1 * rhs)
+    }
+}
+
+impl MulAssign<i64> for Vec2i {
+    fn mul_assign(&mut self, rhs: i64) {
+        self.0 *= rhs;
+        self.1 *= rhs;
+    }
+}
+
+fn in_bounds(coord: &Vec2i, bounds: &Vec2i) -> bool {
+    coord.0 >= 0 && coord.0 < bounds.0 && coord.1 >= 0 && coord.1 < bounds.1
+}
+
 struct Map {
-    antennas: HashMap<char, Vec<Coord>>,
-    bounds: Coord,
+    antennas: HashMap<char, Vec<Vec2i>>,
+    bounds: Vec2i,
 }
 
 impl Map {
@@ -39,14 +72,14 @@ impl Map {
                     line.trim().chars().enumerate().for_each(|(x, ch)| {
                         if ch != '.' {
                             let x = x as i64;
-                            acc.entry(ch).or_insert(vec![]).push(Coord(x, y));
+                            acc.entry(ch).or_default().push(Vec2i(x, y));
                         }
                     });
 
                     acc
                 },
             ),
-            bounds: Coord(
+            bounds: Vec2i(
                 input
                     .trim()
                     .lines()
@@ -64,13 +97,13 @@ fn p1(input: &str) -> String {
     let map = Map::parse_input(input);
 
     map.antennas
-        .iter()
-        .map(|(_, pos)| {
+        .values()
+        .map(|pos| {
             pos.iter()
                 .flat_map(|a| pos.iter().map(|b| (a, b)).collect::<Vec<_>>())
                 .filter(|(x, y)| x != y)
-                .map(|(x, y)| x.mul(2).sub(*y))
-                .filter(|pos| pos.in_bounds(&map.bounds))
+                .map(|(x, y)| (*x * 2) - *y)
+                .filter(|pos| in_bounds(pos, &map.bounds))
                 .collect::<HashSet<_>>()
         })
         .fold(HashSet::new(), |mut acc, positions| {
@@ -85,19 +118,19 @@ fn p2(input: &str) -> String {
     let map = Map::parse_input(input);
 
     map.antennas
-        .iter()
-        .map(|(_, pos)| {
+        .values()
+        .map(|pos| {
             pos.iter()
                 .flat_map(|a| pos.iter().map(|b| (a, b)).collect::<Vec<_>>())
                 .filter(|(x, y)| x != y)
                 .flat_map(|(x, y)| {
                     let mut result = vec![];
-                    let dir = x.sub(*y);
+                    let dir = *x - *y;
                     let mut current = *y;
 
-                    while current.in_bounds(&map.bounds) {
+                    while in_bounds(&current, &map.bounds) {
                         result.push(current);
-                        current = current.add(dir);
+                        current += dir;
                     }
 
                     result
