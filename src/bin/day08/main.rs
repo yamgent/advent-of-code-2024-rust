@@ -6,6 +6,10 @@ const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/08/input.tx
 struct Coord(i64, i64);
 
 impl Coord {
+    fn add(&self, other: Coord) -> Coord {
+        Coord(self.0 + other.0, self.1 + other.1)
+    }
+
     fn sub(&self, other: Coord) -> Coord {
         Coord(self.0 - other.0, self.1 - other.1)
     }
@@ -78,8 +82,34 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    let map = Map::parse_input(input);
+
+    map.antennas
+        .iter()
+        .map(|(_, pos)| {
+            pos.iter()
+                .flat_map(|a| pos.iter().map(|b| (a, b)).collect::<Vec<_>>())
+                .filter(|(x, y)| x != y)
+                .flat_map(|(x, y)| {
+                    let mut result = vec![];
+                    let dir = x.sub(*y);
+                    let mut current = *y;
+
+                    while current.in_bounds(&map.bounds) {
+                        result.push(current);
+                        current = current.add(dir);
+                    }
+
+                    result
+                })
+                .collect::<HashSet<_>>()
+        })
+        .fold(HashSet::new(), |mut acc, positions| {
+            acc.extend(positions);
+            acc
+        })
+        .len()
+        .to_string()
 }
 
 fn main() {
@@ -118,12 +148,11 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(p2(SAMPLE_INPUT), "34");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "1131");
     }
 }
