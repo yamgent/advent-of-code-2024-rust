@@ -1,6 +1,7 @@
 use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 
-use ahash::{HashMap, HashMapExt, HashSet, HashSetExt};
+use ahash::{HashMap, HashMapExt, HashSet};
+use itertools::Itertools;
 
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/08/input.txt");
 
@@ -98,18 +99,18 @@ fn p1(input: &str) -> String {
 
     map.antennas
         .values()
-        .map(|pos| {
+        .flat_map(|pos| {
             pos.iter()
-                .flat_map(|a| pos.iter().map(|b| (a, b)).collect::<Vec<_>>())
-                .filter(|(x, y)| x != y)
-                .map(|(x, y)| (*x * 2) - *y)
+                .permutations(2)
+                .flat_map(|points| {
+                    let x = *points[0];
+                    let y = *points[1];
+                    vec![x * 2 - y]
+                })
                 .filter(|pos| in_bounds(pos, &map.bounds))
-                .collect::<HashSet<_>>()
+                .collect::<Vec<_>>()
         })
-        .fold(HashSet::new(), |mut acc, positions| {
-            acc.extend(positions);
-            acc
-        })
+        .collect::<HashSet<_>>()
         .len()
         .to_string()
 }
@@ -119,14 +120,16 @@ fn p2(input: &str) -> String {
 
     map.antennas
         .values()
-        .map(|pos| {
+        .flat_map(|pos| {
             pos.iter()
-                .flat_map(|a| pos.iter().map(|b| (a, b)).collect::<Vec<_>>())
-                .filter(|(x, y)| x != y)
-                .flat_map(|(x, y)| {
+                .permutations(2)
+                .flat_map(|points| {
+                    let x = *points[0];
+                    let y = *points[1];
+
                     let mut result = vec![];
-                    let dir = *x - *y;
-                    let mut current = *y;
+                    let dir = x - y;
+                    let mut current = y;
 
                     while in_bounds(&current, &map.bounds) {
                         result.push(current);
@@ -135,12 +138,9 @@ fn p2(input: &str) -> String {
 
                     result
                 })
-                .collect::<HashSet<_>>()
+                .collect::<Vec<_>>()
         })
-        .fold(HashSet::new(), |mut acc, positions| {
-            acc.extend(positions);
-            acc
-        })
+        .collect::<HashSet<_>>()
         .len()
         .to_string()
 }
