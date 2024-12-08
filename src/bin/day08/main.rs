@@ -1,65 +1,16 @@
-use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
-
 use ahash::{HashMap, HashMapExt, HashSet};
+use glam::IVec2;
 use itertools::Itertools;
 
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/08/input.txt");
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-struct Vec2i(i64, i64);
-
-impl Add for Vec2i {
-    type Output = Vec2i;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        Self(self.0 + rhs.0, self.1 + rhs.1)
-    }
-}
-
-impl AddAssign for Vec2i {
-    fn add_assign(&mut self, rhs: Self) {
-        self.0 += rhs.0;
-        self.1 += rhs.1;
-    }
-}
-
-impl Sub for Vec2i {
-    type Output = Vec2i;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        Self(self.0 - rhs.0, self.1 - rhs.1)
-    }
-}
-
-impl SubAssign for Vec2i {
-    fn sub_assign(&mut self, rhs: Self) {
-        self.0 -= rhs.0;
-        self.1 -= rhs.1;
-    }
-}
-
-impl Mul<i64> for Vec2i {
-    type Output = Vec2i;
-
-    fn mul(self, rhs: i64) -> Self::Output {
-        Self(self.0 * rhs, self.1 * rhs)
-    }
-}
-
-impl MulAssign<i64> for Vec2i {
-    fn mul_assign(&mut self, rhs: i64) {
-        self.0 *= rhs;
-        self.1 *= rhs;
-    }
-}
-
-fn in_bounds(coord: &Vec2i, bounds: &Vec2i) -> bool {
-    coord.0 >= 0 && coord.0 < bounds.0 && coord.1 >= 0 && coord.1 < bounds.1
+fn in_bounds(coord: &IVec2, bounds: &IVec2) -> bool {
+    coord.x >= 0 && coord.x < bounds.x && coord.y >= 0 && coord.y < bounds.y
 }
 
 struct Map {
-    antennas: HashMap<char, Vec<Vec2i>>,
-    bounds: Vec2i,
+    antennas: HashMap<char, Vec<IVec2>>,
+    bounds: IVec2,
 }
 
 impl Map {
@@ -68,27 +19,27 @@ impl Map {
             antennas: input.trim().lines().enumerate().fold(
                 HashMap::new(),
                 |mut acc, (y, line)| {
-                    let y = y as i64;
+                    let y = y as i32;
 
                     line.trim().chars().enumerate().for_each(|(x, ch)| {
                         if ch != '.' {
-                            let x = x as i64;
-                            acc.entry(ch).or_default().push(Vec2i(x, y));
+                            let x = x as i32;
+                            acc.entry(ch).or_default().push(IVec2::new(x, y));
                         }
                     });
 
                     acc
                 },
             ),
-            bounds: Vec2i(
+            bounds: IVec2::new(
                 input
                     .trim()
                     .lines()
                     .nth(0)
                     .expect("non-empty input")
                     .chars()
-                    .count() as i64,
-                input.trim().lines().count() as i64,
+                    .count() as i32,
+                input.trim().lines().count() as i32,
             ),
         }
     }
