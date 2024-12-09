@@ -1,65 +1,91 @@
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/09/input.txt");
 
 fn p1(input: &str) -> String {
-    const NOT_ALLOCATED: usize = usize::MAX;
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    struct FileId(usize);
 
-    let values = input
-        .trim()
-        .chars()
-        .map(|x| x.to_digit(10).expect("a digit"))
-        .collect::<Vec<_>>();
+    impl FileId {
+        const EMPTY_FID: Self = Self(usize::MAX);
+    }
 
-    let capacity = values.iter().sum::<u32>() as usize;
+    struct Filesystem {
+        blocks: Vec<FileId>,
+    }
 
-    let mut filesystem = values
-        .into_iter()
-        .enumerate()
-        .fold(
-            (Vec::with_capacity(capacity), true),
-            |(mut acc, is_file), (idx, val)| {
-                if is_file {
-                    let id = idx / 2;
-                    (0..val).for_each(|_| acc.push(id));
-                } else {
-                    (0..val).for_each(|_| acc.push(NOT_ALLOCATED));
-                }
-                (acc, !is_file)
-            },
-        )
-        .0;
+    impl Filesystem {
+        fn parse_input(input: &str) -> Self {
+            let input = input
+                .trim()
+                .chars()
+                .map(|x| x.to_digit(10).expect("a digit"))
+                .collect::<Vec<_>>();
 
-    let mut left = filesystem
-        .iter()
-        .enumerate()
-        .find(|(_, val)| **val == NOT_ALLOCATED)
-        .expect("at least one empty space")
-        .0;
+            let capacity = input.iter().sum::<u32>() as usize;
 
-    let mut right = filesystem
-        .iter()
-        .enumerate()
-        .rev()
-        .find(|(_, val)| **val != NOT_ALLOCATED)
-        .expect("at least one allocated file")
-        .0;
-
-    while left < right {
-        filesystem[left] = filesystem[right];
-        filesystem[right] = NOT_ALLOCATED;
-        while left < filesystem.len() && filesystem[left] != NOT_ALLOCATED {
-            left += 1;
+            Self {
+                blocks: input
+                    .into_iter()
+                    .enumerate()
+                    .fold(
+                        (Vec::with_capacity(capacity), true),
+                        |(mut acc, is_file), (idx, val)| {
+                            if is_file {
+                                (0..val).for_each(|_| acc.push(FileId(idx / 2)));
+                            } else {
+                                (0..val).for_each(|_| acc.push(FileId::EMPTY_FID));
+                            }
+                            (acc, !is_file)
+                        },
+                    )
+                    .0,
+            }
         }
-        while right > 0 && filesystem[right] == NOT_ALLOCATED {
-            right -= 1;
+
+        fn compact(mut self) -> Self {
+            let mut left = self
+                .blocks
+                .iter()
+                .enumerate()
+                .find(|(_, val)| **val == FileId::EMPTY_FID)
+                .expect("at least one empty space")
+                .0;
+
+            let mut right = self
+                .blocks
+                .iter()
+                .enumerate()
+                .rev()
+                .find(|(_, val)| **val != FileId::EMPTY_FID)
+                .expect("at least one allocated file")
+                .0;
+
+            while left < right {
+                self.blocks[left] = self.blocks[right];
+                self.blocks[right] = FileId::EMPTY_FID;
+                while left < self.blocks.len() && self.blocks[left] != FileId::EMPTY_FID {
+                    left += 1;
+                }
+                while right > 0 && self.blocks[right] == FileId::EMPTY_FID {
+                    right -= 1;
+                }
+            }
+
+            self
+        }
+
+        fn checksum(&self) -> usize {
+            self.blocks
+                .iter()
+                .enumerate()
+                .filter(|(_, id)| **id != FileId::EMPTY_FID)
+                .map(|(pos, id)| pos * id.0)
+                .sum::<usize>()
         }
     }
 
-    filesystem
-        .into_iter()
-        .enumerate()
-        .filter(|(_, id)| *id != NOT_ALLOCATED)
-        .map(|(pos, id)| pos * id)
-        .sum::<usize>()
+    Filesystem::parse_input(input)
+        .compact()
+        .checksum()
         .to_string()
 }
 
