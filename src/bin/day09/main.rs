@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/09/input.txt");
 
 fn p1(input: &str) -> String {
@@ -90,8 +92,88 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    #[derive(Debug)]
+    struct Block {
+        fid: Option<usize>,
+        len: usize,
+    }
+
+    impl Display for Block {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            let ch = match self.fid {
+                Some(fid) => fid.to_string(),
+                None => ".".to_string(),
+            };
+            for _ in 0..self.len {
+                write!(f, "{ch}")?;
+            }
+            Ok(())
+        }
+    }
+
+    let mut filesystem = input
+        .trim()
+        .chars()
+        .map(|ch| ch.to_digit(10).expect("a digit"))
+        .enumerate()
+        .fold(vec![], |mut acc, (index, len)| {
+            acc.push(Block {
+                fid: if index % 2 == 0 {
+                    Some(index / 2)
+                } else {
+                    None
+                },
+                len: len as usize,
+            });
+            acc
+        });
+
+    let right_block_idx = filesystem
+        .iter()
+        .enumerate()
+        .rev()
+        .find(|(_, block)| block.fid.is_some())
+        .expect("at least one file block")
+        .0;
+
+    (0..=right_block_idx).rev().for_each(|idx| {
+        if filesystem[idx].fid.is_none() {
+            // not a file
+            return;
+        }
+
+        if let Some(replace_idx) = (0..idx).find(|replace_idx| {
+            filesystem[*replace_idx].fid.is_none()
+                && filesystem[*replace_idx].len >= filesystem[idx].len
+        }) {
+            let fid = filesystem[idx].fid.take();
+            let remaining_space = filesystem[replace_idx].len - filesystem[idx].len;
+
+            if remaining_space == 0 {
+                filesystem[replace_idx].fid = fid;
+            } else {
+                filesystem[replace_idx].len = remaining_space;
+                filesystem.insert(
+                    replace_idx,
+                    Block {
+                        fid,
+                        len: filesystem[idx].len,
+                    },
+                );
+            }
+        }
+    });
+
+    filesystem
+        .into_iter()
+        .fold((0, 0), |(mut acc, idx), block| {
+            if let Some(fid) = block.fid {
+                acc += (idx..(idx + block.len)).map(|idx| idx * fid).sum::<usize>();
+            }
+            (acc, idx + block.len)
+        })
+        .0
+        .to_string()
 }
 
 fn main() {
@@ -117,12 +199,11 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(p2(SAMPLE_INPUT), "2858");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "6415163624282");
     }
 }
