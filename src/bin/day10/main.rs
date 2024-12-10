@@ -2,119 +2,93 @@ use ahash::{HashSet, HashSetExt};
 
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/10/input.txt");
 
-fn parse_input(input: &str) -> Vec<Vec<u32>> {
-    input
-        .trim()
-        .lines()
-        .map(|line| {
-            line.chars()
-                .map(|ch| {
-                    if ch == '.' {
-                        999
-                    } else {
-                        ch.to_digit(10).expect("either a dot, or a digit")
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Metric {
+    Score,
+    Rating,
+}
+
+fn solve(input: &str, metric: Metric) -> String {
+    fn parse_input(input: &str) -> Vec<Vec<u32>> {
+        input
+            .trim()
+            .lines()
+            .map(|line| {
+                line.chars()
+                    .map(|ch| {
+                        if ch == '.' {
+                            999
+                        } else {
+                            ch.to_digit(10).expect("either a dot, or a digit")
+                        }
+                    })
+                    .collect()
+            })
+            .collect()
+    }
+
+    fn get_metric(grid: &[Vec<u32>], x: usize, y: usize, metric: Metric) -> usize {
+        if grid[y][x] != 0 {
+            0
+        } else {
+            let mut scores = HashSet::new();
+            let mut ratings = 0;
+
+            fn visit(
+                grid: &[Vec<u32>],
+                x: usize,
+                y: usize,
+                scores: &mut HashSet<(usize, usize)>,
+                ratings: &mut usize,
+            ) {
+                let current_val = grid[y][x];
+                let next_val = current_val + 1;
+
+                if current_val == 9 {
+                    scores.insert((x, y));
+                    *ratings += 1;
+                } else {
+                    if x > 0 && grid[y][x - 1] == next_val {
+                        visit(grid, x - 1, y, scores, ratings);
                     }
-                })
-                .collect()
+                    if y > 0 && grid[y - 1][x] == next_val {
+                        visit(grid, x, y - 1, scores, ratings);
+                    }
+                    if x + 1 < grid[y].len() && grid[y][x + 1] == next_val {
+                        visit(grid, x + 1, y, scores, ratings);
+                    }
+                    if y + 1 < grid.len() && grid[y + 1][x] == next_val {
+                        visit(grid, x, y + 1, scores, ratings);
+                    }
+                }
+            }
+
+            visit(grid, x, y, &mut scores, &mut ratings);
+
+            match metric {
+                Metric::Score => scores.len(),
+                Metric::Rating => ratings,
+            }
+        }
+    }
+
+    let grid = parse_input(input);
+    (0..grid.len())
+        .map(|y| {
+            (0..grid[y].len())
+                .map(|x| get_metric(&grid, x, y, metric))
+                .sum::<usize>()
         })
-        .collect()
+        .sum::<usize>()
+        .to_string()
 }
 
 fn p1(input: &str) -> String {
-    let grid = parse_input(input);
-
-    fn get_score(grid: &[Vec<u32>], x: usize, y: usize) -> usize {
-        if grid[y][x] != 0 {
-            0
-        } else {
-            let mut end = HashSet::new();
-
-            fn visit(grid: &[Vec<u32>], x: usize, y: usize, end: &mut HashSet<(usize, usize)>) {
-                let current_val = grid[y][x];
-                let next_val = current_val + 1;
-
-                if current_val == 9 {
-                    end.insert((x, y));
-                } else {
-                    if x > 0 && grid[y][x - 1] == next_val {
-                        visit(grid, x - 1, y, end);
-                    }
-                    if y > 0 && grid[y - 1][x] == next_val {
-                        visit(grid, x, y - 1, end);
-                    }
-                    if x + 1 < grid[y].len() && grid[y][x + 1] == next_val {
-                        visit(grid, x + 1, y, end);
-                    }
-                    if y + 1 < grid.len() && grid[y + 1][x] == next_val {
-                        visit(grid, x, y + 1, end);
-                    }
-                }
-            }
-
-            visit(grid, x, y, &mut end);
-
-            end.len()
-        }
-    }
-
-    (0..grid.len())
-        .into_iter()
-        .map(|y| {
-            (0..grid[y].len())
-                .into_iter()
-                .map(|x| get_score(&grid, x, y))
-                .sum::<usize>()
-        })
-        .sum::<usize>()
-        .to_string()
+    solve(input, Metric::Score)
 }
 
 fn p2(input: &str) -> String {
-    let grid = parse_input(input);
-
-    fn get_rating(grid: &[Vec<u32>], x: usize, y: usize) -> usize {
-        if grid[y][x] != 0 {
-            0
-        } else {
-            let mut acc = 0;
-
-            fn visit(grid: &[Vec<u32>], x: usize, y: usize, acc: &mut usize) {
-                let current_val = grid[y][x];
-                let next_val = current_val + 1;
-
-                if current_val == 9 {
-                    *acc += 1;
-                } else {
-                    if x > 0 && grid[y][x - 1] == next_val {
-                        visit(grid, x - 1, y, acc);
-                    }
-                    if y > 0 && grid[y - 1][x] == next_val {
-                        visit(grid, x, y - 1, acc);
-                    }
-                    if x + 1 < grid[y].len() && grid[y][x + 1] == next_val {
-                        visit(grid, x + 1, y, acc);
-                    }
-                    if y + 1 < grid.len() && grid[y + 1][x] == next_val {
-                        visit(grid, x, y + 1, acc);
-                    }
-                }
-            }
-
-            visit(grid, x, y, &mut acc);
-            acc
-        }
-    }
-
-    (0..grid.len())
-        .into_iter()
-        .map(|y| {
-            (0..grid[y].len())
-                .into_iter()
-                .map(|x| get_rating(&grid, x, y))
-                .sum::<usize>()
-        })
-        .sum::<usize>()
-        .to_string()
+    solve(input, Metric::Rating)
 }
 
 fn main() {
