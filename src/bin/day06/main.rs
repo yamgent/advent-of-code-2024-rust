@@ -200,7 +200,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "brute-force, took 4s on local"]
+    #[ignore = "inefficient algorithm, took 4s on local"]
     fn test_p2_actual() {
         assert_eq!(p2(ACTUAL_INPUT), "1753");
     }
