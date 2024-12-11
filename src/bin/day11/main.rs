@@ -1,3 +1,5 @@
+use ahash::{HashMap, HashMapExt};
+
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/11/input.txt");
 
 // TODO: Repeated code
@@ -10,29 +12,38 @@ fn total_digits(value: u64) -> usize {
 }
 
 fn solve(input: &str, blink: usize) -> String {
-    fn process(stone: u64, blink: usize) -> usize {
-        if blink == 0 {
-            1
-        } else if stone == 0 {
-            process(1, blink - 1)
+    fn process(stone: u64, blink: usize, dp: &mut HashMap<(u64, usize), usize>) -> usize {
+        if dp.contains_key(&(stone, blink)) {
+            *dp.get(&(stone, blink)).unwrap()
         } else {
-            let digit_count = total_digits(stone);
-
-            if digit_count % 2 == 0 {
-                let upper = stone / 10u64.pow(digit_count as u32 / 2);
-                let lower = stone % (10u64.pow(digit_count as u32 / 2));
-                process(upper, blink - 1) + process(lower, blink - 1)
+            let final_value = if blink == 0 {
+                1
+            } else if stone == 0 {
+                process(1, blink - 1, dp)
             } else {
-                process(stone * 2024, blink - 1)
-            }
+                let digit_count = total_digits(stone);
+
+                if digit_count % 2 == 0 {
+                    let upper = stone / 10u64.pow(digit_count as u32 / 2);
+                    let lower = stone % (10u64.pow(digit_count as u32 / 2));
+                    process(upper, blink - 1, dp) + process(lower, blink - 1, dp)
+                } else {
+                    process(stone * 2024, blink - 1, dp)
+                }
+            };
+
+            dp.insert((stone, blink), final_value);
+            final_value
         }
     }
+
+    let mut dp = HashMap::new();
 
     input
         .trim()
         .split(" ")
         .map(|val| val.parse().expect("a number"))
-        .map(|val| process(val, blink))
+        .map(|val| process(val, blink, &mut dp))
         .sum::<usize>()
         .to_string()
 }
@@ -42,8 +53,7 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    solve(input, 75)
 }
 
 fn main() {
@@ -54,8 +64,6 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    const SAMPLE_INPUT: &str = r"";
 
     #[test]
     fn test_p1_sample() {
@@ -70,13 +78,7 @@ mod tests {
     }
 
     #[test]
-    fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
-    }
-
-    #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "234430066982597");
     }
 }
