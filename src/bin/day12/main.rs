@@ -1,4 +1,4 @@
-use ahash::{HashMap, HashMapExt};
+use ahash::{HashMap, HashMapExt, HashSet, HashSetExt};
 
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/12/input.txt");
 
@@ -139,8 +139,192 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    let grid = input
+        .trim()
+        .lines()
+        .map(|line| line.trim().chars().collect::<Vec<_>>())
+        .collect::<Vec<_>>();
+
+    let mut region_ids = (0..grid.len())
+        .map(|y| (0..grid[y].len()).map(|_| -1).collect::<Vec<_>>())
+        .collect::<Vec<_>>();
+
+    let mut next_id = 1;
+
+    (0..grid.len()).for_each(|y| {
+        (0..grid[y].len()).for_each(|x| {
+            if region_ids[y][x] == -1 {
+                let current_id = next_id;
+                let current_grid_letter = grid[y][x];
+                next_id += 1;
+
+                fn flood_fill(
+                    grid: &[Vec<char>],
+                    region_ids: &mut Vec<Vec<i32>>,
+                    current_id: i32,
+                    current_grid_letter: char,
+                    x: usize,
+                    y: usize,
+                ) {
+                    region_ids[y][x] = current_id;
+
+                    fn suitable(
+                        grid: &[Vec<char>],
+                        region_ids: &[Vec<i32>],
+                        current_grid_letter: char,
+                        pos: &(usize, usize),
+                    ) -> bool {
+                        let x = pos.0;
+                        let y = pos.1;
+                        region_ids[y][x] == -1 && grid[y][x] == current_grid_letter
+                    }
+
+                    if x > 0 {
+                        let left = (x - 1, y);
+                        if suitable(grid, region_ids, current_grid_letter, &left) {
+                            flood_fill(
+                                grid,
+                                region_ids,
+                                current_id,
+                                current_grid_letter,
+                                left.0,
+                                left.1,
+                            );
+                        }
+                    }
+                    if x + 1 < region_ids[y].len() {
+                        let right = (x + 1, y);
+                        if suitable(grid, region_ids, current_grid_letter, &right) {
+                            flood_fill(
+                                grid,
+                                region_ids,
+                                current_id,
+                                current_grid_letter,
+                                right.0,
+                                right.1,
+                            );
+                        }
+                    }
+                    if y > 0 {
+                        let up = (x, y - 1);
+                        if suitable(grid, region_ids, current_grid_letter, &up) {
+                            flood_fill(
+                                grid,
+                                region_ids,
+                                current_id,
+                                current_grid_letter,
+                                up.0,
+                                up.1,
+                            )
+                        }
+                    }
+                    if y + 1 < region_ids.len() {
+                        let down = (x, y + 1);
+                        if suitable(grid, region_ids, current_grid_letter, &down) {
+                            flood_fill(
+                                grid,
+                                region_ids,
+                                current_id,
+                                current_grid_letter,
+                                down.0,
+                                down.1,
+                            );
+                        }
+                    }
+                }
+
+                flood_fill(
+                    &grid,
+                    &mut region_ids,
+                    current_id,
+                    current_grid_letter,
+                    x,
+                    y,
+                );
+            }
+        });
+    });
+
+    let mut areas: HashMap<i32, usize> = HashMap::new();
+    let mut perimeters: HashMap<i32, usize> = HashMap::new();
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    enum Fence {
+        Top,
+        Bottom,
+        Left,
+        Right,
+    }
+
+    let mut fences: HashMap<(usize, usize), HashSet<(i32, Fence)>> = HashMap::new();
+    let empty_hashset: HashSet<(i32, Fence)> = HashSet::new();
+
+    region_ids.iter().enumerate().for_each(|(y, lines)| {
+        lines.iter().enumerate().for_each(|(x, id)| {
+            *areas.entry(*id).or_default() += 1;
+
+            if x == 0 || region_ids[y][x - 1] != *id {
+                fences.entry((x, y)).or_default().insert((*id, Fence::Left));
+
+                if y == 0
+                    || !fences
+                        .get(&(x, y - 1))
+                        .unwrap_or(&empty_hashset)
+                        .contains(&(*id, Fence::Left))
+                {
+                    *perimeters.entry(*id).or_default() += 1;
+                }
+            }
+            if y == 0 || region_ids[y - 1][x] != *id {
+                fences.entry((x, y)).or_default().insert((*id, Fence::Top));
+
+                if x == 0
+                    || !fences
+                        .get(&(x - 1, y))
+                        .unwrap_or(&empty_hashset)
+                        .contains(&(*id, Fence::Top))
+                {
+                    *perimeters.entry(*id).or_default() += 1;
+                }
+            }
+            if x + 1 >= region_ids[y].len() || region_ids[y][x + 1] != *id {
+                fences
+                    .entry((x, y))
+                    .or_default()
+                    .insert((*id, Fence::Right));
+
+                if y == 0
+                    || !fences
+                        .get(&(x, y - 1))
+                        .unwrap_or(&empty_hashset)
+                        .contains(&(*id, Fence::Right))
+                {
+                    *perimeters.entry(*id).or_default() += 1;
+                }
+            }
+            if y + 1 >= region_ids.len() || region_ids[y + 1][x] != *id {
+                fences
+                    .entry((x, y))
+                    .or_default()
+                    .insert((*id, Fence::Bottom));
+
+                if x == 0
+                    || !fences
+                        .get(&(x - 1, y))
+                        .unwrap_or(&empty_hashset)
+                        .contains(&(*id, Fence::Bottom))
+                {
+                    *perimeters.entry(*id).or_default() += 1;
+                }
+            }
+        });
+    });
+
+    areas
+        .into_iter()
+        .map(|(id, area)| *perimeters.get(&id).unwrap_or(&0) * area)
+        .sum::<usize>()
+        .to_string()
 }
 
 fn main() {
@@ -151,8 +335,6 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    const SAMPLE_INPUT: &str = r"";
 
     #[test]
     fn test_p1_sample() {
@@ -189,7 +371,7 @@ MIIISIJEEE
 MMMISSJEEE
 "),
             "1930"
-        )
+        );
     }
 
     #[test]
@@ -199,12 +381,65 @@ MMMISSJEEE
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(
+            p2(r"
+AAAA
+BBCD
+BBCC
+EEEC
+"),
+            "80"
+        );
+        assert_eq!(
+            p2(r"
+OOOOO
+OXOXO
+OOOOO
+OXOXO
+OOOOO
+"),
+            "436"
+        );
+        assert_eq!(
+            p2(r"
+RRRRIICCFF
+RRRRIICCCF
+VVRRRCCFFF
+VVRCCCJFFF
+VVVVCJJCFE
+VVIVCCJJEE
+VVIIICJJEE
+MIIIIIJJEE
+MIIISIJEEE
+MMMISSJEEE
+"),
+            "1206"
+        );
+        assert_eq!(
+            p2(r"
+EEEEE
+EXXXX
+EEEEE
+EXXXX
+EEEEE
+"),
+            "236"
+        );
+        assert_eq!(
+            p2(r"
+AAAAAA
+AAABBA
+AAABBA
+ABBAAA
+ABBAAA
+AAAAAA
+"),
+            "368"
+        );
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "865662");
     }
 }
