@@ -33,9 +33,9 @@ fn solve(input: &str, pricing: Pricing) -> usize {
                     region_ids: &mut Vec<Vec<i32>>,
                     current_id: i32,
                     current_grid_letter: char,
-                    x: usize,
-                    y: usize,
+                    pos: &(usize, usize),
                 ) {
+                    let (x, y) = *pos;
                     region_ids[y][x] = current_id;
 
                     fn suitable(
@@ -44,61 +44,32 @@ fn solve(input: &str, pricing: Pricing) -> usize {
                         current_grid_letter: char,
                         pos: &(usize, usize),
                     ) -> bool {
-                        let x = pos.0;
-                        let y = pos.1;
+                        let (x, y) = *pos;
                         region_ids[y][x] == -1 && grid[y][x] == current_grid_letter
                     }
 
                     if x > 0 {
                         let left = (x - 1, y);
                         if suitable(grid, region_ids, current_grid_letter, &left) {
-                            flood_fill(
-                                grid,
-                                region_ids,
-                                current_id,
-                                current_grid_letter,
-                                left.0,
-                                left.1,
-                            );
+                            flood_fill(grid, region_ids, current_id, current_grid_letter, &left);
                         }
                     }
                     if x + 1 < region_ids[y].len() {
                         let right = (x + 1, y);
                         if suitable(grid, region_ids, current_grid_letter, &right) {
-                            flood_fill(
-                                grid,
-                                region_ids,
-                                current_id,
-                                current_grid_letter,
-                                right.0,
-                                right.1,
-                            );
+                            flood_fill(grid, region_ids, current_id, current_grid_letter, &right);
                         }
                     }
                     if y > 0 {
                         let up = (x, y - 1);
                         if suitable(grid, region_ids, current_grid_letter, &up) {
-                            flood_fill(
-                                grid,
-                                region_ids,
-                                current_id,
-                                current_grid_letter,
-                                up.0,
-                                up.1,
-                            )
+                            flood_fill(grid, region_ids, current_id, current_grid_letter, &up)
                         }
                     }
                     if y + 1 < region_ids.len() {
                         let down = (x, y + 1);
                         if suitable(grid, region_ids, current_grid_letter, &down) {
-                            flood_fill(
-                                grid,
-                                region_ids,
-                                current_id,
-                                current_grid_letter,
-                                down.0,
-                                down.1,
-                            );
+                            flood_fill(grid, region_ids, current_id, current_grid_letter, &down);
                         }
                     }
                 }
@@ -108,8 +79,7 @@ fn solve(input: &str, pricing: Pricing) -> usize {
                     &mut region_ids,
                     current_id,
                     current_grid_letter,
-                    x,
-                    y,
+                    &(x, y),
                 );
             }
         });
@@ -197,7 +167,6 @@ fn solve(input: &str, pricing: Pricing) -> usize {
 
     let measurements = match pricing {
         Pricing::ByPerimeter => perimeters,
-
         Pricing::BySides => sides,
     };
 
