@@ -30,15 +30,13 @@ fn solve(input: &str, prize_correction: i64) -> i64 {
 
             lines[0]
                 .split(":")
-                .skip(1)
-                .next()
+                .nth(1)
                 .expect(" X+xxx, Y+xxx")
                 .split(",")
                 .map(|part| {
                     part.trim()
                         .split("+")
-                        .skip(1)
-                        .next()
+                        .nth(1)
                         .expect("a number")
                         .parse::<i64>()
                         .expect("a number")
@@ -48,15 +46,13 @@ fn solve(input: &str, prize_correction: i64) -> i64 {
                 });
             lines[1]
                 .split(":")
-                .skip(1)
-                .next()
+                .nth(1)
                 .expect(" X+xxx, Y+xxx")
                 .split(",")
                 .map(|part| {
                     part.trim()
                         .split("+")
-                        .skip(1)
-                        .next()
+                        .nth(1)
                         .expect("a number")
                         .parse::<i64>()
                         .expect("a number")
@@ -66,15 +62,13 @@ fn solve(input: &str, prize_correction: i64) -> i64 {
                 });
             lines[2]
                 .split(":")
-                .skip(1)
-                .next()
+                .nth(1)
                 .expect(" X=xxx, Y=xxx")
                 .split(",")
                 .map(|part| {
                     part.trim()
                         .split("=")
-                        .skip(1)
-                        .next()
+                        .nth(1)
                         .expect("a number")
                         .parse::<i64>()
                         .expect("a number")
