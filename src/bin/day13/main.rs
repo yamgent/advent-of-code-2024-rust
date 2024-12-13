@@ -1,5 +1,3 @@
-use regex::Regex;
-
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/13/input.txt");
 
 struct Machine {
@@ -27,15 +25,65 @@ fn solve(input: &str, prize_correction: i64) -> i64 {
         .trim()
         .split("\n\n")
         .map(|test_case| {
-            Regex::new(r"Button A: X\+(\d+), Y\+(\d+)\nButton B: X\+(\d+), Y\+(\d+)\nPrize: X=(\d+), Y=(\d+)")
-                .expect("valid regex")
-                .captures(test_case)
-                .expect("a valid written test case")
-                .extract::<6>()
-                .1
-                .into_iter()
-                .map(|val| val.parse::<i64>().expect("a number"))
-                .collect::<Vec<_>>()
+            let lines = test_case.lines().collect::<Vec<_>>();
+            let mut results = Vec::with_capacity(6);
+
+            lines[0]
+                .split(":")
+                .skip(1)
+                .next()
+                .expect(" X+xxx, Y+xxx")
+                .split(",")
+                .map(|part| {
+                    part.trim()
+                        .split("+")
+                        .skip(1)
+                        .next()
+                        .expect("a number")
+                        .parse::<i64>()
+                        .expect("a number")
+                })
+                .for_each(|val| {
+                    results.push(val);
+                });
+            lines[1]
+                .split(":")
+                .skip(1)
+                .next()
+                .expect(" X+xxx, Y+xxx")
+                .split(",")
+                .map(|part| {
+                    part.trim()
+                        .split("+")
+                        .skip(1)
+                        .next()
+                        .expect("a number")
+                        .parse::<i64>()
+                        .expect("a number")
+                })
+                .for_each(|val| {
+                    results.push(val);
+                });
+            lines[2]
+                .split(":")
+                .skip(1)
+                .next()
+                .expect(" X=xxx, Y=xxx")
+                .split(",")
+                .map(|part| {
+                    part.trim()
+                        .split("=")
+                        .skip(1)
+                        .next()
+                        .expect("a number")
+                        .parse::<i64>()
+                        .expect("a number")
+                })
+                .for_each(|val| {
+                    results.push(val);
+                });
+
+            results
         })
         .map(|values| Machine {
             a: (values[0], values[1]),
