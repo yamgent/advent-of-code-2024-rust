@@ -12,17 +12,13 @@ struct Machine {
 // a_2 * x + b_2 * y = c_2
 fn solve_sim_eq(a_1: i64, b_1: i64, c_1: i64, a_2: i64, b_2: i64, c_2: i64) -> Option<(i64, i64)> {
     let det = a_1 * b_2 - a_2 * b_1;
-    if det == 0 {
+    let top = c_1 * b_2 + c_2 * -b_1;
+    let bot = c_1 * -a_2 + c_2 * a_1;
+
+    if det == 0 || top % det != 0 || bot % det != 0 {
         None
     } else {
-        let top = c_1 * b_2 + c_2 * -b_1;
-        let bot = c_1 * -a_2 + c_2 * a_1;
-
-        if top % det != 0 || bot % det != 0 {
-            None
-        } else {
-            Some((top / det, bot / det))
-        }
+        Some((top / det, bot / det))
     }
 }
 
