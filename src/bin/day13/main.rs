@@ -70,8 +70,37 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    input
+        .trim()
+        .split("\n\n")
+        .map(|test_case| {
+            MACHINE_REGEX
+                .captures(test_case)
+                .expect("a valid written test case")
+                .extract::<6>()
+                .1
+                .into_iter()
+                .map(|val| val.parse::<i64>().expect("a number"))
+                .collect::<Vec<_>>()
+        })
+        .map(|values| Machine {
+            a: (values[0], values[1]),
+            b: (values[2], values[3]),
+            prize: (values[4] + 10000000000000, values[5] + 10000000000000),
+        })
+        .flat_map(|machine| {
+            solve_sim_eq(
+                machine.a.0,
+                machine.b.0,
+                machine.prize.0,
+                machine.a.1,
+                machine.b.1,
+                machine.prize.1,
+            )
+        })
+        .map(|(a, b)| a * 3 + b)
+        .sum::<i64>()
+        .to_string()
 }
 
 fn main() {
@@ -112,13 +141,7 @@ Prize: X=18641, Y=10279
     }
 
     #[test]
-    fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
-    }
-
-    #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "77204516023437");
     }
 }
