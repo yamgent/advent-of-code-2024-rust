@@ -1,3 +1,5 @@
+use ahash::HashSet;
+
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/14/input.txt");
 
 struct Robot {
@@ -93,13 +95,40 @@ fn solve_p1(input: &str, bathroom_size: (i64, i64)) -> String {
         .to_string()
 }
 
+const ACTUAL_BATHROOM_SIZE: (i64, i64) = (101, 103);
+
 fn p1(input: &str) -> String {
-    solve_p1(input, (101, 103))
+    solve_p1(input, ACTUAL_BATHROOM_SIZE)
+}
+
+fn print_view(view: &HashSet<(i64, i64)>) {
+    (0..ACTUAL_BATHROOM_SIZE.1).for_each(|y| {
+        (0..ACTUAL_BATHROOM_SIZE.0)
+            .for_each(|x| print!("{}", if view.contains(&(x, y)) { "*" } else { "." }));
+        println!();
+    });
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    let mut current = parse_input(input);
+
+    for iteration in 1..10_000 {
+        current = current.advance(ACTUAL_BATHROOM_SIZE, 1);
+
+        let view: HashSet<(i64, i64)> = current.iter().map(|robot| robot.pos).collect();
+
+        if view
+            .iter()
+            .find(|pos| (1..=10).all(|i| view.contains(&(pos.0, pos.1 + i))))
+            .is_some()
+        {
+            println!("Iteration {}", iteration);
+            print_view(&view);
+            return iteration.to_string();
+        }
+    }
+
+    panic!("cannot find christmas tree.");
 }
 
 fn main() {
@@ -137,13 +166,7 @@ p=9,5 v=-3,-3
     }
 
     #[test]
-    fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
-    }
-
-    #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "8280");
     }
 }
