@@ -119,8 +119,7 @@ fn p2(input: &str) -> String {
 
         if view
             .iter()
-            .find(|pos| (1..=10).all(|i| view.contains(&(pos.0, pos.1 + i))))
-            .is_some()
+            .any(|pos| (1..=10).all(|i| view.contains(&(pos.0, pos.1 + i))))
         {
             println!("Iteration {}", iteration);
             print_view(&view);
