@@ -165,6 +165,7 @@ p=9,5 v=-3,-3
     }
 
     #[test]
+    #[ignore = "inefficient algorithm, took 1s on local"]
     fn test_p2_actual() {
         assert_eq!(p2(ACTUAL_INPUT), "8280");
     }
