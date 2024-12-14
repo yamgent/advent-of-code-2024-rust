@@ -1,5 +1,3 @@
-use ahash::{HashMap, HashMapExt};
-
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/14/input.txt");
 
 struct Robot {
@@ -11,24 +9,18 @@ fn solve_p1(input: &str, bathroom_size: (i64, i64)) -> String {
     let find_quadrant = |pos: (i64, i64)| -> Option<usize> {
         let mid = (bathroom_size.0 / 2, bathroom_size.1 / 2);
 
-        if pos.0 < mid.0 {
-            if pos.1 < mid.1 {
-                Some(0)
-            } else if pos.1 > mid.1 {
-                Some(2)
-            } else {
-                None
-            }
-        } else if pos.0 > mid.0 {
-            if pos.1 < mid.1 {
-                Some(1)
-            } else if pos.1 > mid.1 {
-                Some(3)
-            } else {
-                None
-            }
-        } else {
-            None
+        match pos.0.cmp(&mid.0) {
+            std::cmp::Ordering::Less => match pos.1.cmp(&mid.1) {
+                std::cmp::Ordering::Less => Some(0),
+                std::cmp::Ordering::Equal => None,
+                std::cmp::Ordering::Greater => Some(2),
+            },
+            std::cmp::Ordering::Equal => None,
+            std::cmp::Ordering::Greater => match pos.1.cmp(&mid.1) {
+                std::cmp::Ordering::Less => Some(1),
+                std::cmp::Ordering::Equal => None,
+                std::cmp::Ordering::Greater => Some(3),
+            },
         }
     };
 
@@ -71,7 +63,7 @@ fn solve_p1(input: &str, bathroom_size: (i64, i64)) -> String {
                 (robot.pos.1 + (robot.vel.1 * 100)).rem_euclid(bathroom_size.1),
             )
         })
-        .flat_map(|robot| find_quadrant(robot))
+        .flat_map(find_quadrant)
         .fold([0, 0, 0, 0], |mut acc, quadrant| {
             acc[quadrant] += 1;
             acc
