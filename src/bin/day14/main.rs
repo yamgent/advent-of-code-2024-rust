@@ -5,6 +5,61 @@ struct Robot {
     vel: (i64, i64),
 }
 
+trait AdvanceSimulation {
+    fn advance(self, bathroom_size: (i64, i64), time: i64) -> Self;
+}
+
+fn parse_input(input: &str) -> Vec<Robot> {
+    input
+        .trim()
+        .lines()
+        .map(|line| {
+            let (p, v) = line
+                .trim()
+                .split_once(" ")
+                .expect("line delimited by a single space, left is p, right is v");
+
+            fn parse_vec2i(input: &str) -> (i64, i64) {
+                input
+                    .split("=")
+                    .nth(1)
+                    .expect("x,x")
+                    .split(",")
+                    .map(|value| value.parse::<i64>().expect("a number"))
+                    .enumerate()
+                    .fold((0, 0), |acc, (idx, value)| {
+                        if idx == 0 {
+                            (value, acc.1)
+                        } else if idx == 1 {
+                            (acc.0, value)
+                        } else {
+                            panic!("Found extra numbers, but was not expecting more than 2");
+                        }
+                    })
+            }
+
+            Robot {
+                pos: parse_vec2i(p),
+                vel: parse_vec2i(v),
+            }
+        })
+        .collect()
+}
+
+impl AdvanceSimulation for Vec<Robot> {
+    fn advance(self, bathroom_size: (i64, i64), time: i64) -> Self {
+        self.into_iter()
+            .map(|robot| Robot {
+                pos: (
+                    (robot.pos.0 + (robot.vel.0 * time)).rem_euclid(bathroom_size.0),
+                    (robot.pos.1 + (robot.vel.1 * time)).rem_euclid(bathroom_size.1),
+                ),
+                vel: robot.vel,
+            })
+            .collect()
+    }
+}
+
 fn solve_p1(input: &str, bathroom_size: (i64, i64)) -> String {
     let find_quadrant = |pos: (i64, i64)| -> Option<usize> {
         let mid = (bathroom_size.0 / 2, bathroom_size.1 / 2);
@@ -24,45 +79,10 @@ fn solve_p1(input: &str, bathroom_size: (i64, i64)) -> String {
         }
     };
 
-    input
-        .trim()
-        .lines()
-        .map(|line| {
-            let (p, v) = line
-                .trim()
-                .split_once(" ")
-                .expect("line delimited by a single space, left is p, right is v");
-
-            fn parse_vec2i(input: &str) -> (i64, i64) {
-                input
-                    .split("=")
-                    .nth(1)
-                    .expect("x,x")
-                    .split(",")
-                    .map(|value| value.parse::<i64>().expect("a number"))
-                    .enumerate()
-                    .fold((0i64, 0i64), |acc, (idx, value)| {
-                        if idx == 0 {
-                            (value, acc.1)
-                        } else if idx == 1 {
-                            (acc.0, value)
-                        } else {
-                            panic!("Found extra numbers, but was not expecting more than 2");
-                        }
-                    })
-            }
-
-            Robot {
-                pos: parse_vec2i(p),
-                vel: parse_vec2i(v),
-            }
-        })
-        .map(|robot| {
-            (
-                (robot.pos.0 + (robot.vel.0 * 100)).rem_euclid(bathroom_size.0),
-                (robot.pos.1 + (robot.vel.1 * 100)).rem_euclid(bathroom_size.1),
-            )
-        })
+    parse_input(input)
+        .advance(bathroom_size, 100)
+        .into_iter()
+        .map(|robot| robot.pos)
         .flat_map(find_quadrant)
         .fold([0, 0, 0, 0], |mut acc, quadrant| {
             acc[quadrant] += 1;
