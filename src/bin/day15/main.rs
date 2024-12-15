@@ -387,9 +387,9 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
         assert_eq!(p1(ACTUAL_INPUT), "1511865");
     }
 
-    fn get_grid_string(grid: &Vec<Vec<char>>) -> String {
+    fn get_grid_string(grid: &[Vec<char>]) -> String {
         grid.iter()
-            .map(|line| line.into_iter().collect::<String>())
+            .map(|line| line.iter().collect::<String>())
             .collect::<Vec<_>>()
             .join("\n")
     }
