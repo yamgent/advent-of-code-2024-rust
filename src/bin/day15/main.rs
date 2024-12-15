@@ -149,6 +149,39 @@ impl Input {
             })
             .sum::<usize>()
     }
+
+    fn expand_p2(grid: Vec<Vec<char>>) -> Vec<Vec<char>> {
+        grid.into_iter()
+            .map(|row| {
+                row.into_iter()
+                    .flat_map(|ch| match ch {
+                        '#' => ['#', '#'],
+                        'O' => ['[', ']'],
+                        '.' => ['.', '.'],
+                        '@' => ['@', '.'],
+                        _ => panic!("Unrecognized character {} in grid", ch),
+                    })
+                    .collect()
+            })
+            .collect()
+    }
+
+    fn gps_p2(grid: Vec<Vec<char>>) -> usize {
+        grid.into_iter()
+            .enumerate()
+            .map(|(y, row)| {
+                row.into_iter()
+                    .enumerate()
+                    .map(|(x, ch)| if ch == '[' { 100 * y + x } else { 0 })
+                    .sum::<usize>()
+            })
+            .sum()
+    }
+
+    fn simulate_p2(mut self) -> usize {
+        self.grid = Input::expand_p2(self.grid);
+        Input::gps_p2(self.grid)
+    }
 }
 
 fn p1(input: &str) -> String {
@@ -156,8 +189,7 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    Input::parse_input(input).simulate_p2().to_string()
 }
 
 fn main() {
@@ -169,12 +201,7 @@ fn main() {
 mod tests {
     use super::*;
 
-    const SAMPLE_INPUT: &str = r"";
-
-    #[test]
-    fn test_p1_sample() {
-        assert_eq!(
-            p1(r"
+    const SMALLER_EXAMPLE: &str = r"
 ########
 #..O.O.#
 ##@.O..#
@@ -185,11 +212,9 @@ mod tests {
 ########
 
 <^^>>>vv<v>>v<<
-"),
-            "2028"
-        );
-        assert_eq!(
-            p1(r"
+";
+
+    const LARGER_EXAMPLE: &str = r"
 ##########
 #..O..O.O#
 #......O.#
@@ -211,9 +236,12 @@ vvv<<^>^v^^><<>>><>^<<><^vv^^<>vvv<>><^^v>^>vv<>v<<<<v<^v>^<^^>>>^<v<v
 <><^^>^^^<><vvvvv^v<v<<>^v<v>v<<^><<><<><<<^^<<<^<<>><<><^^^>^^<>^>v<>
 ^^>vv<^v^v<vv>^<><v<^v>^^^>>>^^vvv^>vvv<>>>^<^>>>>>^<<^v>^vvv<>^<><<v>
 v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
-"),
-            "10092"
-        );
+";
+
+    #[test]
+    fn test_p1_sample() {
+        assert_eq!(p1(SMALLER_EXAMPLE), "2028");
+        assert_eq!(p1(LARGER_EXAMPLE), "10092");
     }
 
     #[test]
@@ -222,8 +250,55 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
     }
 
     #[test]
+    fn test_p2_expand() {
+        let input = Input::parse_input(LARGER_EXAMPLE);
+        assert_eq!(
+            Input::expand_p2(input.grid)
+                .into_iter()
+                .map(|line| line.into_iter().collect::<String>())
+                .collect::<Vec<_>>()
+                .join("\n"),
+            r"
+####################
+##....[]....[]..[]##
+##............[]..##
+##..[][]....[]..[]##
+##....[]@.....[]..##
+##[]##....[]......##
+##[]....[]....[]..##
+##..[][]..[]..[][]##
+##........[]......##
+####################
+"
+            .trim()
+        );
+    }
+
+    #[test]
+    fn test_p2_gps() {
+        let input = Input::parse_input(
+            r"
+####################
+##[].......[].[][]##
+##[]...........[].##
+##[]........[][][]##
+##[]......[]....[]##
+##..##......[]....##
+##..[]............##
+##..@......[].[][]##
+##......[][]..[]..##
+####################
+
+^
+",
+        );
+        assert_eq!(Input::gps_p2(input.grid), 9021);
+    }
+
+    #[test]
+    #[ignore = "not yet implemented"]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(p2(LARGER_EXAMPLE), "9021");
     }
 
     #[test]
