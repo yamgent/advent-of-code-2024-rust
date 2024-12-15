@@ -200,104 +200,113 @@ impl Input {
                     grid[robot_position.1][robot_position.0] = '.';
                     robot_position = final_robot_pos;
                 } else if matches!(grid[final_robot_pos.1][final_robot_pos.0], '[' | ']') {
-                    match current_move {
-                        Move::Up | Move::Down => {
-                            let final_robot_fat_pos =
-                                if grid[final_robot_pos.1][final_robot_pos.0] == '[' {
-                                    (final_robot_pos.0, final_robot_pos.1)
-                                } else {
-                                    (final_robot_pos.0 - 1, final_robot_pos.1)
-                                };
+                    fn get_box_new_pos(
+                        current_move: &Move,
+                        bounds: (usize, usize),
+                        pos: (usize, usize),
+                    ) -> (usize, usize) {
+                        match current_move {
+                            Move::Up | Move::Down => (
+                                pos.0,
+                                current_move
+                                    .advance(pos, bounds)
+                                    .expect("grid is bounded and won't go out of bounds")
+                                    .1,
+                            ),
+                            Move::Left | Move::Right => (
+                                current_move
+                                    .advance(pos, bounds)
+                                    .expect("grid is bounded and won't go out of bounds")
+                                    .0,
+                                pos.1,
+                            ),
+                        }
+                    }
 
-                            let mut affected_boxes = vec![];
+                    let mut affected_boxes = vec![];
 
-                            let mut to_process =
-                                [final_robot_fat_pos].into_iter().collect::<VecDeque<_>>();
+                    let mut boxes_to_process =
+                        [if grid[final_robot_pos.1][final_robot_pos.0] == '[' {
+                            (final_robot_pos.0, final_robot_pos.1)
+                        } else {
+                            (final_robot_pos.0 - 1, final_robot_pos.1)
+                        }]
+                        .into_iter()
+                        .collect::<VecDeque<_>>();
 
-                            let mut can_move = true;
+                    let mut can_move = true;
 
-                            while can_move && !to_process.is_empty() {
-                                let current_process = to_process.pop_front().unwrap();
-                                let next_y =
-                                    current_move.advance(current_process, bounds).unwrap().1;
+                    while can_move && !boxes_to_process.is_empty() {
+                        let current_box = boxes_to_process.pop_front().unwrap();
+                        affected_boxes.push(current_box);
 
-                                affected_boxes.push(current_process);
+                        let new_box_pos = get_box_new_pos(&current_move, bounds, current_box);
 
-                                if grid[next_y][current_process.0] == '.'
-                                    && grid[next_y][current_process.0 + 1] == '.'
-                                {
-                                    continue;
+                        let is_empty_space = match current_move {
+                            Move::Up | Move::Down => {
+                                grid[new_box_pos.1][new_box_pos.0] == '.'
+                                    && grid[new_box_pos.1][new_box_pos.0 + 1] == '.'
+                            }
+                            Move::Left => grid[new_box_pos.1][new_box_pos.0] == '.',
+                            Move::Right => grid[new_box_pos.1][new_box_pos.0 + 1] == '.',
+                        };
+
+                        let has_a_wall = match current_move {
+                            Move::Up | Move::Down => {
+                                grid[new_box_pos.1][new_box_pos.0] == '#'
+                                    || grid[new_box_pos.1][new_box_pos.0 + 1] == '#'
+                            }
+                            Move::Left => grid[new_box_pos.1][new_box_pos.0] == '#',
+                            Move::Right => grid[new_box_pos.1][new_box_pos.0 + 1] == '#',
+                        };
+
+                        if is_empty_space {
+                            continue;
+                        }
+                        if has_a_wall {
+                            can_move = false;
+                            break;
+                        }
+
+                        match current_move {
+                            Move::Up | Move::Down => {
+                                if grid[new_box_pos.1][new_box_pos.0] == '[' {
+                                    boxes_to_process.push_back(new_box_pos);
                                 }
-                                if grid[next_y][current_process.0] == '#'
-                                    || grid[next_y][current_process.0 + 1] == '#'
-                                {
-                                    can_move = false;
-                                    break;
+                                if grid[new_box_pos.1][new_box_pos.0] == ']' {
+                                    boxes_to_process.push_back((new_box_pos.0 - 1, new_box_pos.1));
                                 }
-                                if grid[next_y][current_process.0] == '[' {
-                                    to_process.push_back((current_process.0, next_y));
-                                }
-                                if grid[next_y][current_process.0] == ']' {
-                                    to_process.push_back((current_process.0 - 1, next_y));
-                                }
-                                if grid[next_y][current_process.0 + 1] == '[' {
-                                    to_process.push_back((current_process.0 + 1, next_y));
+                                if grid[new_box_pos.1][new_box_pos.0 + 1] == '[' {
+                                    boxes_to_process.push_back((new_box_pos.0 + 1, new_box_pos.1));
                                 }
                             }
-
-                            if can_move {
-                                affected_boxes.iter().for_each(|box_pos| {
-                                    grid[box_pos.1][box_pos.0] = '.';
-                                    grid[box_pos.1][box_pos.0 + 1] = '.';
-                                });
-                                affected_boxes.into_iter().for_each(|box_pos| {
-                                    let next_y = current_move.advance(box_pos, bounds).unwrap().1;
-                                    grid[next_y][box_pos.0] = '[';
-                                    grid[next_y][box_pos.0 + 1] = ']';
-                                });
-
-                                grid[final_robot_fat_pos.1][final_robot_fat_pos.0] = '.';
-                                grid[final_robot_fat_pos.1][final_robot_fat_pos.0 + 1] = '.';
-
-                                grid[final_robot_pos.1][final_robot_pos.0] = '@';
-                                grid[robot_position.1][robot_position.0] = '.';
-                                robot_position = final_robot_pos;
+                            Move::Left => {
+                                if grid[new_box_pos.1][new_box_pos.0] == ']' {
+                                    boxes_to_process.push_back((new_box_pos.0 - 1, new_box_pos.1));
+                                }
+                            }
+                            Move::Right => {
+                                if grid[new_box_pos.1][new_box_pos.0 + 1] == '[' {
+                                    boxes_to_process.push_back((new_box_pos.0 + 1, new_box_pos.1));
+                                }
                             }
                         }
-                        Move::Left | Move::Right => {
-                            let mut final_box_position = Some(final_robot_pos);
+                    }
 
-                            while let Some(pos) = final_box_position {
-                                if grid[pos.1][pos.0] == '#' {
-                                    final_box_position = None;
-                                    break;
-                                }
-                                if grid[pos.1][pos.0] == '.' {
-                                    break;
-                                }
+                    if can_move {
+                        affected_boxes.iter().for_each(|box_pos| {
+                            grid[box_pos.1][box_pos.0] = '.';
+                            grid[box_pos.1][box_pos.0 + 1] = '.';
+                        });
+                        affected_boxes.into_iter().for_each(|box_pos| {
+                            let next_pos = current_move.advance(box_pos, bounds).unwrap();
+                            grid[next_pos.1][next_pos.0] = '[';
+                            grid[next_pos.1][next_pos.0 + 1] = ']';
+                        });
 
-                                final_box_position = current_move.advance(pos, bounds);
-                                if let Some(pos) = final_box_position {
-                                    final_box_position = current_move.advance(pos, bounds);
-                                }
-                            }
-
-                            if let Some(pos) = final_box_position {
-                                let (start, end) = if pos.0 < final_robot_pos.0 {
-                                    (pos.0, final_robot_pos.0)
-                                } else {
-                                    ((final_robot_pos.0 + 1), pos.0 + 1)
-                                };
-
-                                (start..end).for_each(|x| {
-                                    grid[final_robot_pos.1][x] =
-                                        if (x - start) % 2 == 0 { '[' } else { ']' }
-                                });
-                                grid[final_robot_pos.1][final_robot_pos.0] = '@';
-                                grid[robot_position.1][robot_position.0] = '.';
-                                robot_position = final_robot_pos;
-                            }
-                        }
+                        grid[final_robot_pos.1][final_robot_pos.0] = '@';
+                        grid[robot_position.1][robot_position.0] = '.';
+                        robot_position = final_robot_pos;
                     }
                 }
             }
