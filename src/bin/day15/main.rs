@@ -178,8 +178,75 @@ impl Input {
             .sum()
     }
 
+    fn move_p2(mut grid: Vec<Vec<char>>, moves: Vec<Move>) -> Vec<Vec<char>> {
+        let mut robot_position = grid
+            .iter()
+            .enumerate()
+            .find_map(|(y, row)| {
+                row.iter()
+                    .enumerate()
+                    .find_map(|(x, ch)| if *ch == '@' { Some(x) } else { None })
+                    .map(|x| (x, y))
+            })
+            .expect("input grid should have a robot");
+        let bounds = (grid[0].len(), grid.len());
+
+        moves.into_iter().for_each(|current_move| {
+            if let Some(final_robot_pos) = current_move.advance(robot_position, bounds) {
+                if grid[final_robot_pos.1][final_robot_pos.0] == '.' {
+                    grid[final_robot_pos.1][final_robot_pos.0] = '@';
+                    grid[robot_position.1][robot_position.0] = '.';
+                    robot_position = final_robot_pos;
+                } else if matches!(grid[final_robot_pos.1][final_robot_pos.0], '[' | ']') {
+                    match current_move {
+                        Move::Up | Move::Down => {
+                            todo!();
+                        }
+                        Move::Left | Move::Right => {
+                            let mut final_box_position = Some(final_robot_pos);
+
+                            while let Some(pos) = final_box_position {
+                                if grid[pos.1][pos.0] == '#' {
+                                    final_box_position = None;
+                                    break;
+                                }
+                                if grid[pos.1][pos.0] == '.' {
+                                    break;
+                                }
+
+                                final_box_position = current_move.advance(pos, bounds);
+                                if let Some(pos) = final_box_position {
+                                    final_box_position = current_move.advance(pos, bounds);
+                                }
+                            }
+
+                            if let Some(pos) = final_box_position {
+                                let (start, end) = if pos.0 < final_robot_pos.0 {
+                                    (pos.0, final_robot_pos.0)
+                                } else {
+                                    ((final_robot_pos.0 + 1), pos.0 + 1)
+                                };
+
+                                (start..end).for_each(|x| {
+                                    grid[final_robot_pos.1][x] =
+                                        if (x - start) % 2 == 0 { '[' } else { ']' }
+                                });
+                                grid[final_robot_pos.1][final_robot_pos.0] = '@';
+                                grid[robot_position.1][robot_position.0] = '.';
+                                robot_position = final_robot_pos;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        grid
+    }
+
     fn simulate_p2(mut self) -> usize {
         self.grid = Input::expand_p2(self.grid);
+        self.grid = Input::move_p2(self.grid, self.moves);
         Input::gps_p2(self.grid)
     }
 }
@@ -249,15 +316,18 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
         assert_eq!(p1(ACTUAL_INPUT), "1511865");
     }
 
+    fn get_grid_string(grid: &Vec<Vec<char>>) -> String {
+        grid.iter()
+            .map(|line| line.into_iter().collect::<String>())
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
     #[test]
     fn test_p2_expand() {
         let input = Input::parse_input(LARGER_EXAMPLE);
         assert_eq!(
-            Input::expand_p2(input.grid)
-                .into_iter()
-                .map(|line| line.into_iter().collect::<String>())
-                .collect::<Vec<_>>()
-                .join("\n"),
+            get_grid_string(&Input::expand_p2(input.grid)),
             r"
 ####################
 ##....[]....[]..[]##
@@ -293,6 +363,222 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
 ",
         );
         assert_eq!(Input::gps_p2(input.grid), 9021);
+    }
+
+    #[test]
+    fn test_p2_move() {
+        fn move_test_case(idx: usize, input: &str, expected: &str) {
+            let input = Input::parse_input(input);
+            assert_eq!(
+                get_grid_string(&Input::move_p2(input.grid, input.moves)),
+                expected.trim(),
+                "idx: {}",
+                idx
+            );
+        }
+
+        [
+            // 0
+            (
+                r"
+#########
+##..@..##
+#########
+
+<
+",
+                r"
+#########
+##.@...##
+#########
+",
+            ),
+            // 1
+            (
+                r"
+#########
+##..@..##
+#########
+
+>
+",
+                r"
+#########
+##...@.##
+#########
+",
+            ),
+            // 2
+            (
+                r"
+#########
+##..@..##
+##.....##
+#########
+
+v
+",
+                r"
+#########
+##.....##
+##..@..##
+#########
+",
+            ),
+            // 3
+            (
+                r"
+#########
+##.....##
+##..@..##
+#########
+
+^
+",
+                r"
+#########
+##..@..##
+##.....##
+#########
+",
+            ),
+            // 4
+            (
+                r"
+#########
+##.....##
+##..@#.##
+#########
+
+>
+",
+                r"
+#########
+##.....##
+##..@#.##
+#########
+",
+            ),
+            // 5
+            (
+                r"
+#############
+##.........##
+##..@[][][]##
+##.........##
+#############
+
+>
+",
+                r"
+#############
+##.........##
+##..@[][][]##
+##.........##
+#############
+",
+            ),
+            // 6
+            (
+                r"
+#############
+##.........##
+##..@[][]..##
+##.........##
+#############
+
+>
+",
+                r"
+#############
+##.........##
+##...@[][].##
+##.........##
+#############
+",
+            ),
+            // 7
+            (
+                r"
+#############
+##.........##
+##..@[].#..##
+##.........##
+#############
+
+>
+",
+                r"
+#############
+##.........##
+##...@[]#..##
+##.........##
+#############
+",
+            ),
+            // 8
+            (
+                r"
+#############
+##.........##
+##[][][]@..##
+##.........##
+#############
+
+<
+",
+                r"
+#############
+##.........##
+##[][][]@..##
+##.........##
+#############
+",
+            ),
+            // 9
+            (
+                r"
+#############
+##.........##
+##..[][]@..##
+##.........##
+#############
+
+<
+",
+                r"
+#############
+##.........##
+##.[][]@...##
+##.........##
+#############
+",
+            ),
+            // 10
+            (
+                r"
+#############
+##.........##
+##..#.[]@..##
+##.........##
+#############
+
+<
+",
+                r"
+#############
+##.........##
+##..#[]@...##
+##.........##
+#############
+",
+            ),
+        ]
+        .iter()
+        .enumerate()
+        .for_each(|(idx, (input, expected))| {
+            move_test_case(idx, input, expected);
+        });
     }
 
     #[test]
