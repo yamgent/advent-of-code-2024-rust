@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/15/input.txt");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -200,7 +202,67 @@ impl Input {
                 } else if matches!(grid[final_robot_pos.1][final_robot_pos.0], '[' | ']') {
                     match current_move {
                         Move::Up | Move::Down => {
-                            todo!();
+                            let final_robot_fat_pos =
+                                if grid[final_robot_pos.1][final_robot_pos.0] == '[' {
+                                    (final_robot_pos.0, final_robot_pos.1)
+                                } else {
+                                    (final_robot_pos.0 - 1, final_robot_pos.1)
+                                };
+
+                            let mut affected_boxes = vec![];
+
+                            let mut to_process =
+                                [final_robot_fat_pos].into_iter().collect::<VecDeque<_>>();
+
+                            let mut can_move = true;
+
+                            while can_move && !to_process.is_empty() {
+                                let current_process = to_process.pop_front().unwrap();
+                                let next_y =
+                                    current_move.advance(current_process, bounds).unwrap().1;
+
+                                affected_boxes.push(current_process);
+
+                                if grid[next_y][current_process.0] == '.'
+                                    && grid[next_y][current_process.0 + 1] == '.'
+                                {
+                                    continue;
+                                }
+                                if grid[next_y][current_process.0] == '#'
+                                    || grid[next_y][current_process.0 + 1] == '#'
+                                {
+                                    can_move = false;
+                                    break;
+                                }
+                                if grid[next_y][current_process.0] == '[' {
+                                    to_process.push_back((current_process.0, next_y));
+                                }
+                                if grid[next_y][current_process.0] == ']' {
+                                    to_process.push_back((current_process.0 - 1, next_y));
+                                }
+                                if grid[next_y][current_process.0 + 1] == '[' {
+                                    to_process.push_back((current_process.0 + 1, next_y));
+                                }
+                            }
+
+                            if can_move {
+                                affected_boxes.iter().for_each(|box_pos| {
+                                    grid[box_pos.1][box_pos.0] = '.';
+                                    grid[box_pos.1][box_pos.0 + 1] = '.';
+                                });
+                                affected_boxes.into_iter().for_each(|box_pos| {
+                                    let next_y = current_move.advance(box_pos, bounds).unwrap().1;
+                                    grid[next_y][box_pos.0] = '[';
+                                    grid[next_y][box_pos.0 + 1] = ']';
+                                });
+
+                                grid[final_robot_fat_pos.1][final_robot_fat_pos.0] = '.';
+                                grid[final_robot_fat_pos.1][final_robot_fat_pos.0 + 1] = '.';
+
+                                grid[final_robot_pos.1][final_robot_pos.0] = '@';
+                                grid[robot_position.1][robot_position.0] = '.';
+                                robot_position = final_robot_pos;
+                            }
                         }
                         Move::Left | Move::Right => {
                             let mut final_box_position = Some(final_robot_pos);
@@ -571,6 +633,250 @@ v
 ##..#[]@...##
 ##.........##
 #############
+",
+            ),
+            // 11
+            (
+                r"
+#############
+##...#.....##
+##...[]....##
+##....@....##
+##.........##
+#############
+
+^
+",
+                r"
+#############
+##...#.....##
+##...[]....##
+##....@....##
+##.........##
+#############
+",
+            ),
+            // 12
+            (
+                r"
+#############
+##..#..#...##
+##...[]....##
+##....@....##
+##.........##
+#############
+
+^
+",
+                r"
+#############
+##..#[]#...##
+##....@....##
+##.........##
+##.........##
+#############
+",
+            ),
+            // 13
+            (
+                r"
+#############
+##..#..#...##
+##...[]....##
+##...[]....##
+##...@.....##
+#############
+
+^
+",
+                r"
+#############
+##..#[]#...##
+##...[]....##
+##...@.....##
+##.........##
+#############
+",
+            ),
+            // 14
+            (
+                r"
+#############
+##.#....#..##
+##..[][]...##
+##...[]....##
+##....@....##
+#############
+
+^
+",
+                r"
+#############
+##.#[][]#..##
+##...[]....##
+##....@....##
+##.........##
+#############
+",
+            ),
+            // 15
+            (
+                r"
+#############
+##.##...#..##
+##..[][]...##
+##...[]....##
+##....@....##
+#############
+
+^
+",
+                r"
+#############
+##.##...#..##
+##..[][]...##
+##...[]....##
+##....@....##
+#############
+",
+            ),
+            // 16
+            (
+                r"
+#############
+##.#...##..##
+##..[][]...##
+##...[]....##
+##....@....##
+#############
+
+^
+",
+                r"
+#############
+##.#...##..##
+##..[][]...##
+##...[]....##
+##....@....##
+#############
+",
+            ),
+            // 17
+            (
+                r"
+#############
+###..##..####
+##.[]..[]..##
+##..[][]...##
+##...[]....##
+##....@....##
+#############
+
+^
+",
+                r"
+#############
+###[]##[]####
+##..[][]...##
+##...[]....##
+##....@....##
+##.........##
+#############
+",
+            ),
+            // 18
+            (
+                r"
+#############
+###..##.#####
+##.[]..[]..##
+##..[][]...##
+##...[]....##
+##....@....##
+#############
+
+^
+",
+                r"
+#############
+###..##.#####
+##.[]..[]..##
+##..[][]...##
+##...[]....##
+##....@....##
+#############
+",
+            ),
+            // 19
+            (
+                r"
+##############
+#............#
+#..[].[].[]..#
+#...[]..[]...#
+#....[][]....#
+#.....[].....#
+#......@.....#
+##############
+
+^
+",
+                r"
+##############
+#..[]....[]..#
+#...[][][]...#
+#....[][]....#
+#.....[].....#
+#......@.....#
+#............#
+##############
+",
+            ),
+            // 20: we are too lazy to repeat all "up" cases for the "down" cases, we assume that
+            //     the logic is the "same". So we only have two "down" cases here.
+            (
+                r"
+##############
+#......@.....#
+#...[][][]...#
+#....[][]....#
+#.....[].....#
+#............#
+##############
+
+v
+",
+                r"
+##############
+#............#
+#...[].@[]...#
+#.....[].....#
+#....[][]....#
+#.....[].....#
+##############
+",
+            ),
+            // 21: second "down" case.
+            (
+                r"
+##############
+#......@.....#
+#...[][][]...#
+#....[][]....#
+#.....[].....#
+#......#.....#
+##############
+
+v
+",
+                r"
+##############
+#......@.....#
+#...[][][]...#
+#....[][]....#
+#.....[].....#
+#......#.....#
+##############
 ",
             ),
         ]
