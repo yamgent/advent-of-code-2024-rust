@@ -888,14 +888,12 @@ v
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_sample() {
         assert_eq!(p2(LARGER_EXAMPLE), "9021");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "1519991");
     }
 }
