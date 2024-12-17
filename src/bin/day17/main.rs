@@ -233,6 +233,8 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    use std::ops::{Shl, Shr};
+
     use super::*;
 
     const P1_EXAMPLE: &str = r"
@@ -308,14 +310,34 @@ Program: 0,1,0,4,1,4,2,1,2,5,3,1,4,0,5,3,5,6,6,1,7,1
 
         let (_, program) = parse_input(P2_EXAMPLE);
         let answer = 117440;
-        assert!(execute_program(vec![answer, 0, 0], &program) == program);
+        assert_eq!(execute_program(vec![answer, 0, 0], &program), program);
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
         let (_, program) = parse_input(ACTUAL_INPUT);
-        let answer = 0;
-        assert!(execute_program(vec![answer, 0, 0], &program) == program);
+        let answer = {
+            fn recursive(reg_a: i64, current_idx: usize, program: &[i64]) -> Option<i64> {
+                if current_idx >= program.len() {
+                    Some(reg_a)
+                } else {
+                    (0..8).find_map(|d| {
+                        let new_a = reg_a * 8 + d;
+
+                        if (d ^ 3 ^ (new_a.shr(d ^ 5))) % 8
+                            == program[program.len() - 1 - current_idx]
+                        {
+                            recursive(new_a, current_idx + 1, program)
+                        } else {
+                            None
+                        }
+                    })
+                }
+            }
+
+            recursive(0, 0, &program).expect("have an answer")
+        };
+        assert_eq!(execute_program(vec![answer, 0, 0], &program), program);
+        assert_eq!(answer, 105981155568026);
     }
 }
