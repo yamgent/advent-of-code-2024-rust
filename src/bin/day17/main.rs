@@ -49,15 +49,11 @@ fn execute_program(mut reg: Vec<i64>, program: &[i64]) -> Vec<i64> {
         let opcode = program[ptr];
 
         let operand = program[ptr + 1];
-        let is_literal_operand = matches!(operand, 0..=3);
-        let operand_value = if is_literal_operand {
-            operand
-        } else if matches!(operand, 4..=6) {
-            reg[(operand - 4) as usize]
-        } else if operand == 7 {
-            panic!("Operand 7 is reserved");
-        } else {
-            panic!("Illegal operand {}", operand);
+        let operand_value = match operand {
+            0..=3 => operand,
+            4..=6 => reg[(operand - 4) as usize],
+            7 => panic!("Operand 7 is reserved"),
+            _ => panic!("Illegal operand {}", operand),
         };
 
         let mut advance_ptr = true;
@@ -111,9 +107,9 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let (_, _program) = parse_input(input);
-
     /*
+    {
+        let (_, program) = parse_input(ACTUAL_INPUT);
         // https://www.reddit.com/r/adventofcode/comments/1hg69ql/2024_day_17_part_2_can_someone_please_provide_a/
         println!("{:?}", execute_program(vec![0, 0, 0], &program));
         println!("{:?}", execute_program(vec![1, 0, 0], &program));
@@ -169,10 +165,7 @@ fn p2(input: &str) -> String {
                         .enumerate()
                         .map(|(j, x)| if j == i { *v } else { *x })
                         .collect::<Vec<_>>();
-                    dbg!(execute_program(
-                        vec![dbg!(compute(start, final_rest)), 0, 0],
-                        &program
-                    ))[i]
+                    execute_program(vec![compute(start, final_rest), 0, 0], &program)[i]
                         == program[i]
                 })
                 .expect("input is valid");
@@ -180,8 +173,57 @@ fn p2(input: &str) -> String {
         }
 
         compute(start, rest).to_string();
+    }
     */
-    "".to_string()
+
+    let (_, program) = parse_input(input);
+
+    (0..(program.len() / 2))
+        .fold(vec![], |mut acc, i| {
+            let ptr = i * 2;
+            let opcode = program[ptr];
+
+            let operand = program[ptr + 1];
+            let operand_value = match operand {
+                0..=3 => operand.to_string(),
+                4 => "A".to_string(),
+                5 => "B".to_string(),
+                6 => "C".to_string(),
+                7 => panic!("Operand 7 is reserved"),
+                _ => panic!("Illegal operand {}", operand),
+            };
+
+            acc.push(match opcode {
+                0 => {
+                    format!("{}: A = A >> {}", ptr, operand_value)
+                }
+                1 => {
+                    format!("{}: B ^= {}", ptr, operand)
+                }
+                2 => {
+                    format!("{}: B = {} % 8", ptr, operand_value)
+                }
+                3 => {
+                    format!("{}: A != 0 -> goto {}", ptr, operand)
+                }
+                4 => {
+                    format!("{}: B ^= C", ptr)
+                }
+                5 => {
+                    format!("{}: out({} % 8)", ptr, operand_value)
+                }
+                6 => {
+                    format!("{}: B = A >> {}", ptr, operand_value)
+                }
+                7 => {
+                    format!("{}: C = A >> {}", ptr, operand_value)
+                }
+                _ => panic!("Invalid opcode {}", opcode),
+            });
+
+            acc
+        })
+        .join("\n")
 }
 
 fn main() {
@@ -193,18 +235,25 @@ fn main() {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_p1_sample() {
-        assert_eq!(
-            p1(r"
+    const P1_EXAMPLE: &str = r"
 Register A: 729
 Register B: 0
 Register C: 0
 
 Program: 0,1,5,4,3,0
-"),
-            "4,6,3,5,6,3,5,2,1,0"
-        );
+";
+
+    const P2_EXAMPLE: &str = r"
+Register A: 2024
+Register B: 0
+Register C: 0
+
+Program: 0,3,5,4,3,0
+";
+
+    #[test]
+    fn test_p1_sample() {
+        assert_eq!(p1(P1_EXAMPLE), "4,6,3,5,6,3,5,2,1,0");
     }
 
     #[test]
@@ -213,24 +262,60 @@ Program: 0,1,5,4,3,0
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_sample() {
+        assert_eq!(
+            p2(P1_EXAMPLE),
+            r"
+0: A = A >> 1
+2: out(A % 8)
+4: A != 0 -> goto 0
+"
+            .trim()
+        );
+        assert_eq!(
+            p2(P2_EXAMPLE),
+            r"
+0: A = A >> 3
+2: out(A % 8)
+4: A != 0 -> goto 0
+"
+            .trim()
+        );
+
         assert_eq!(
             p2(r"
 Register A: 2024
 Register B: 0
 Register C: 0
 
-Program: 0,3,5,4,3,0
+Program: 0,1,0,4,1,4,2,1,2,5,3,1,4,0,5,3,5,6,6,1,7,1
 "),
-            //"117440"
-            ""
+            r"
+0: A = A >> 1
+2: A = A >> A
+4: B ^= 4
+6: B = 1 % 8
+8: B = B % 8
+10: A != 0 -> goto 1
+12: B ^= C
+14: out(3 % 8)
+16: out(C % 8)
+18: B = A >> 1
+20: C = A >> 1
+"
+            .trim()
         );
+
+        let (_, program) = parse_input(P2_EXAMPLE);
+        let answer = 117440;
+        assert!(execute_program(vec![answer, 0, 0], &program) == program);
     }
 
     #[test]
     #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        let (_, program) = parse_input(ACTUAL_INPUT);
+        let answer = 0;
+        assert!(execute_program(vec![answer, 0, 0], &program) == program);
     }
 }
