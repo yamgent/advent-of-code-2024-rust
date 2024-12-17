@@ -1,11 +1,11 @@
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/17/input.txt");
 
 fn parse_input(input: &str) -> (Vec<i64>, Vec<i64>) {
-    input.trim().lines().into_iter().enumerate().fold(
+    input.trim().lines().enumerate().fold(
         (vec![], vec![]),
         |(mut reg, program), (line_number, line)| {
             match line_number {
-                0 | 1 | 2 => {
+                0..=2 => {
                     reg.push(
                         line.split(":")
                             .nth(1)
@@ -111,7 +111,7 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let (_, program) = parse_input(input);
+    let (_, _program) = parse_input(input);
 
     /*
         // https://www.reddit.com/r/adventofcode/comments/1hg69ql/2024_day_17_part_2_can_someone_please_provide_a/
