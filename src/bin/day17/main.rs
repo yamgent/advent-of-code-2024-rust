@@ -1,7 +1,7 @@
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/17/input.txt");
 
-fn p1(input: &str) -> String {
-    let (mut reg, program) = input.trim().lines().into_iter().enumerate().fold(
+fn parse_input(input: &str) -> (Vec<i64>, Vec<i64>) {
+    input.trim().lines().into_iter().enumerate().fold(
         (vec![], vec![]),
         |(mut reg, program), (line_number, line)| {
             match line_number {
@@ -38,8 +38,10 @@ fn p1(input: &str) -> String {
                 }
             }
         },
-    );
+    )
+}
 
+fn execute_program(mut reg: Vec<i64>, program: &[i64]) -> Vec<i64> {
     let mut ptr = 0;
     let mut out = vec![];
 
@@ -96,14 +98,89 @@ fn p1(input: &str) -> String {
         }
     }
 
-    out.into_iter()
+    out
+}
+
+fn p1(input: &str) -> String {
+    let (reg, program) = parse_input(input);
+    execute_program(reg, &program)
+        .into_iter()
         .map(|num| num.to_string())
         .collect::<Vec<_>>()
         .join(",")
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
+    let (_, program) = parse_input(input);
+
+    /*
+        // https://www.reddit.com/r/adventofcode/comments/1hg69ql/2024_day_17_part_2_can_someone_please_provide_a/
+        println!("{:?}", execute_program(vec![0, 0, 0], &program));
+        println!("{:?}", execute_program(vec![1, 0, 0], &program));
+        println!("{:?}", execute_program(vec![2, 0, 0], &program));
+        println!("{:?}", execute_program(vec![3, 0, 0], &program));
+        println!("{:?}", execute_program(vec![4, 0, 0], &program));
+        println!("{:?}", execute_program(vec![5, 0, 0], &program));
+        println!("{:?}", execute_program(vec![6, 0, 0], &program));
+        println!("{:?}", execute_program(vec![7, 0, 0], &program));
+        println!("{:?}", execute_program(vec![8, 0, 0], &program));
+        println!();
+        println!("{:?}", execute_program(vec![9, 0, 0], &program));
+        println!("{:?}", execute_program(vec![10, 0, 0], &program));
+        println!("{:?}", execute_program(vec![11, 0, 0], &program));
+        println!("{:?}", execute_program(vec![12, 0, 0], &program));
+        println!("{:?}", execute_program(vec![13, 0, 0], &program));
+        println!("{:?}", execute_program(vec![14, 0, 0], &program));
+        println!("{:?}", execute_program(vec![15, 0, 0], &program));
+        println!();
+        println!("{:?}", execute_program(vec![16, 0, 0], &program));
+        println!("{:?}", execute_program(vec![17, 0, 0], &program));
+        println!("{:?}", execute_program(vec![18, 0, 0], &program));
+        println!("{:?}", execute_program(vec![19, 0, 0], &program));
+        println!("{:?}", execute_program(vec![20, 0, 0], &program));
+        println!("{:?}", execute_program(vec![21, 0, 0], &program));
+        println!("{:?}", execute_program(vec![22, 0, 0], &program));
+        println!("{:?}", execute_program(vec![23, 0, 0], &program));
+        println!();
+        println!("{:?}", execute_program(vec![64, 0, 0], &program));
+        println!("{:?}", execute_program(vec![512, 0, 0], &program));
+        println!("{:?}", execute_program(vec![4096, 0, 0], &program));
+        println!("{:?}", execute_program(vec![32768, 0, 0], &program));
+        println!("{:?}", execute_program(vec![262144, 0, 0], &program));
+        println!("{:?}", execute_program(vec![2097152, 0, 0], &program));
+        println!("{:?}", execute_program(vec![16777216, 0, 0], &program));
+        println!("{:?}", execute_program(vec![16777217, 0, 0], &program));
+        println!("{:?}", execute_program(vec![16777218, 0, 0], &program));
+        println!();
+
+        let len_pow = program.len() - 1;
+        let start = 8_i64.pow(len_pow as u32);
+        let mut rest = (0..len_pow).map(|v| v as i64).collect::<Vec<_>>();
+
+        fn compute(start: i64, rest: Vec<i64>) -> i64 {
+            start + rest.iter().rev().fold(0, |acc, val| acc * 8 + val)
+        }
+
+        for i in 0..rest.len() {
+            rest[i] = (0..8)
+                .find(|v| {
+                    let final_rest = rest
+                        .iter()
+                        .enumerate()
+                        .map(|(j, x)| if j == i { *v } else { *x })
+                        .collect::<Vec<_>>();
+                    dbg!(execute_program(
+                        vec![dbg!(compute(start, final_rest)), 0, 0],
+                        &program
+                    ))[i]
+                        == program[i]
+                })
+                .expect("input is valid");
+            println!("{:?}", rest);
+        }
+
+        compute(start, rest).to_string();
+    */
     "".to_string()
 }
 
@@ -116,17 +193,18 @@ fn main() {
 mod tests {
     use super::*;
 
-    const SAMPLE_INPUT: &str = r"
+    #[test]
+    fn test_p1_sample() {
+        assert_eq!(
+            p1(r"
 Register A: 729
 Register B: 0
 Register C: 0
 
 Program: 0,1,5,4,3,0
-";
-
-    #[test]
-    fn test_p1_sample() {
-        assert_eq!(p1(SAMPLE_INPUT), "4,6,3,5,6,3,5,2,1,0");
+"),
+            "4,6,3,5,6,3,5,2,1,0"
+        );
     }
 
     #[test]
@@ -135,8 +213,19 @@ Program: 0,1,5,4,3,0
     }
 
     #[test]
+    #[ignore = "not yet implemented"]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(
+            p2(r"
+Register A: 2024
+Register B: 0
+Register C: 0
+
+Program: 0,3,5,4,3,0
+"),
+            //"117440"
+            ""
+        );
     }
 
     #[test]
