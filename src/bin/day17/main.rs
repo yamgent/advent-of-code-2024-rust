@@ -233,7 +233,7 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use std::ops::{Shl, Shr};
+    use std::ops::Shr;
 
     use super::*;
 
