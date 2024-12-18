@@ -42,7 +42,7 @@ fn parse_input(input: &str) -> Vec<(usize, usize)> {
         .collect()
 }
 
-fn get_shortest_path(points: &HashSet<(usize, usize)>, bounds: (usize, usize)) -> Option<usize> {
+fn get_shortest_path(points: &HashSet<&(usize, usize)>, bounds: (usize, usize)) -> Option<usize> {
     let mut visited = HashSet::new();
     let mut to_process = VecDeque::new();
     to_process.push_back((0, (0, 0)));
@@ -73,10 +73,8 @@ fn get_shortest_path(points: &HashSet<(usize, usize)>, bounds: (usize, usize)) -
 }
 
 fn solve_p1(input: &str, bounds: (usize, usize), bytes_fallen: usize) -> String {
-    let points = parse_input(input)
-        .into_iter()
-        .take(bytes_fallen)
-        .collect::<HashSet<_>>();
+    let points = parse_input(input);
+    let points = points.iter().take(bytes_fallen).collect::<HashSet<_>>();
 
     get_shortest_path(&points, bounds)
         .expect("input should always have an answer")
@@ -87,9 +85,30 @@ fn p1(input: &str) -> String {
     solve_p1(input, (71, 71), 1024)
 }
 
+fn solve_p2(input: &str, bounds: (usize, usize), start_bytes_count: usize) -> String {
+    let points = parse_input(input);
+
+    let mut left = start_bytes_count + 1;
+    let mut right = points.len();
+
+    while left < right {
+        let mid = left + (right - left) / 2;
+
+        let current_points = points.iter().take(mid).collect::<HashSet<_>>();
+
+        if get_shortest_path(&current_points, bounds).is_some() {
+            left = mid + 1;
+        } else {
+            right = mid;
+        }
+    }
+
+    let candidate = points[right - 1];
+    format!("{},{}", candidate.0, candidate.1)
+}
+
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    solve_p2(input, (71, 71), 1024)
 }
 
 fn main() {
@@ -141,12 +160,11 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(solve_p2(SAMPLE_INPUT, (7, 7), 12), "6,1");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "50,28");
     }
 }
