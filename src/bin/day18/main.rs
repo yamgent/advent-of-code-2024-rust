@@ -28,11 +28,10 @@ fn go_down(coord: (usize, usize), bounds: (usize, usize)) -> Option<(usize, usiz
     }
 }
 
-fn solve_p1(input: &str, bounds: (usize, usize), bytes_fallen: usize) -> String {
-    let points = input
+fn parse_input(input: &str) -> Vec<(usize, usize)> {
+    input
         .trim()
         .lines()
-        .take(bytes_fallen)
         .map(|x| x.trim().split_once(",").expect("x,x"))
         .map(|(x, y)| {
             (
@@ -40,15 +39,17 @@ fn solve_p1(input: &str, bounds: (usize, usize), bytes_fallen: usize) -> String 
                 (y.parse::<usize>().expect("a number")),
             )
         })
-        .collect::<HashSet<_>>();
+        .collect()
+}
 
+fn get_shortest_path(points: &HashSet<(usize, usize)>, bounds: (usize, usize)) -> Option<usize> {
     let mut visited = HashSet::new();
     let mut to_process = VecDeque::new();
     to_process.push_back((0, (0, 0)));
 
     while let Some(current) = to_process.pop_front() {
         if current.1 == (bounds.0 - 1, bounds.1 - 1) {
-            return current.0.to_string();
+            return Some(current.0);
         }
 
         [
@@ -68,7 +69,18 @@ fn solve_p1(input: &str, bounds: (usize, usize), bytes_fallen: usize) -> String 
         });
     }
 
-    panic!("Input should have an answer");
+    None
+}
+
+fn solve_p1(input: &str, bounds: (usize, usize), bytes_fallen: usize) -> String {
+    let points = parse_input(input)
+        .into_iter()
+        .take(bytes_fallen)
+        .collect::<HashSet<_>>();
+
+    get_shortest_path(&points, bounds)
+        .expect("input should always have an answer")
+        .to_string()
 }
 
 fn p1(input: &str) -> String {
