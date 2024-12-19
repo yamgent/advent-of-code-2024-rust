@@ -2,7 +2,12 @@ use ahash::{HashMap, HashMapExt};
 
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/19/input.txt");
 
-fn p1(input: &str) -> String {
+struct Input<'a> {
+    towels: Vec<&'a str>,
+    patterns: Vec<&'a str>,
+}
+
+fn parse_input(input: &str) -> Input {
     let (towels, patterns) = input
         .trim()
         .split_once("\n\n")
@@ -11,7 +16,14 @@ fn p1(input: &str) -> String {
     let towels = towels.split(",").map(|s| s.trim()).collect::<Vec<_>>();
     let patterns = patterns.lines().map(|s| s.trim()).collect::<Vec<_>>();
 
-    patterns
+    Input { towels, patterns }
+}
+
+fn p1(input: &str) -> String {
+    let input = parse_input(input);
+
+    input
+        .patterns
         .into_iter()
         .filter(|pattern| {
             fn check(pattern: &str, towels: &[&str], current_idx: usize) -> bool {
@@ -30,26 +42,21 @@ fn p1(input: &str) -> String {
                 }
             }
 
-            check(pattern, &towels, 0)
+            check(pattern, &input.towels, 0)
         })
         .count()
         .to_string()
 }
 
 fn p2(input: &str) -> String {
-    let (towels, patterns) = input
-        .trim()
-        .split_once("\n\n")
-        .expect("input has two sections");
+    let input = parse_input(input);
+    let mut dp = HashMap::new();
 
-    let towels = towels.split(",").map(|s| s.trim()).collect::<Vec<_>>();
-    let patterns = patterns.lines().map(|s| s.trim()).collect::<Vec<_>>();
-    let mut dp: HashMap<&str, usize> = HashMap::new();
-
-    patterns
+    input
+        .patterns
         .into_iter()
         .map(|pattern| {
-            fn check<'a>(
+            fn count<'a>(
                 dp: &mut HashMap<&'a str, usize>,
                 pattern: &'a str,
                 towels: &[&str],
@@ -68,7 +75,7 @@ fn p2(input: &str) -> String {
                                 if pattern.len() - current_idx >= towel.len()
                                     && pattern[current_idx..(current_idx + towel.len())] == **towel
                                 {
-                                    check(dp, pattern, towels, current_idx + towel.len())
+                                    count(dp, pattern, towels, current_idx + towel.len())
                                 } else {
                                     0
                                 }
@@ -81,7 +88,7 @@ fn p2(input: &str) -> String {
                 }
             }
 
-            check(&mut dp, pattern, &towels, 0)
+            count(&mut dp, pattern, &input.towels, 0)
         })
         .sum::<usize>()
         .to_string()
