@@ -31,11 +31,11 @@ impl Pos {
         }
     }
 
-    fn add(&self, delta: (i32, i32), bounds: (usize, usize)) -> Option<Self> {
-        let x = self.0 as i32 - delta.0;
-        let y = self.1 as i32 - delta.1;
+    fn add(&self, delta: (i64, i64), bounds: (usize, usize)) -> Option<Self> {
+        let x = self.0 as i64 - delta.0;
+        let y = self.1 as i64 - delta.1;
 
-        if x < 0 || y < 0 || x >= bounds.0 as i32 || y >= bounds.1 as i32 {
+        if x < 0 || y < 0 || x >= bounds.0 as i64 || y >= bounds.1 as i64 {
             None
         } else {
             Some(Self(x as usize, y as usize))
@@ -47,7 +47,7 @@ struct Input {
     grid: Vec<Vec<char>>,
     bounds: (usize, usize),
 
-    all_costs: HashMap<Pos, i32>,
+    all_costs: HashMap<Pos, i64>,
     path: Vec<Pos>,
 }
 
@@ -113,7 +113,7 @@ impl Input {
     }
 }
 
-fn solve_p1(input: &str, limit: i32) -> String {
+fn solve_p1(input: &str, limit: i64) -> String {
     let input = Input::parse_input(input);
 
     (0..input.bounds.1)
@@ -149,24 +149,24 @@ fn p1(input: &str) -> String {
     solve_p1(input, 100)
 }
 
-fn solve_p2(input: &str, limit: i32) -> String {
+fn solve_p2(input: &str, limit: i64) -> String {
     let input = Input::parse_input(input);
 
     input
         .path
         .iter()
         .map(|start_cheat| {
-            (-20i32..=20)
+            (-20i64..=20)
                 .map(|dx| {
-                    (-20i32..=20)
+                    (-20i64..=20)
                         .filter(|dy| dx.abs() + dy.abs() <= 20)
                         .flat_map(|dy| start_cheat.add((dx, dy), input.bounds))
                         .filter(|end_cheat| input.grid[end_cheat.1][end_cheat.0] == '.')
                         .map(|end_cheat| {
                             input.all_costs.get(&end_cheat).expect("visited before")
                                 - input.all_costs.get(start_cheat).expect("visited before")
-                                - (start_cheat.0 as i32 - end_cheat.0 as i32).abs()
-                                - (start_cheat.1 as i32 - end_cheat.1 as i32).abs()
+                                - (start_cheat.0 as i64 - end_cheat.0 as i64).abs()
+                                - (start_cheat.1 as i64 - end_cheat.1 as i64).abs()
                         })
                         .filter(|diff| *diff >= limit)
                         .count()
@@ -210,32 +210,58 @@ mod tests {
 
     #[test]
     fn test_p1_sample() {
-        assert_eq!(solve_p1(SAMPLE_INPUT, 2), "44");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 3), "30");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 4), "30");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 5), "16");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 6), "16");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 7), "14");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 8), "14");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 9), "10");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 10), "10");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 11), "8");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 12), "8");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 13), "5");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 19), "5");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 20), "5");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 21), "4");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 35), "4");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 36), "4");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 37), "3");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 38), "3");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 39), "2");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 40), "2");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 41), "1");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 63), "1");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 64), "1");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 65), "0");
-        assert_eq!(solve_p1(SAMPLE_INPUT, 66), "0");
+        let test_cases = [
+            (14, 2),
+            (14, 4),
+            (2, 6),
+            (4, 8),
+            (2, 10),
+            (3, 12),
+            (1, 20),
+            (1, 36),
+            (1, 38),
+            (1, 40),
+            (1, 64),
+        ];
+
+        test_cases.iter().enumerate().for_each(|(case_id, case)| {
+            let total_with = test_cases.iter().skip(case_id).map(|c| c.0).sum::<usize>();
+            let total_without = test_cases
+                .iter()
+                .skip(case_id + 1)
+                .map(|c| c.0)
+                .sum::<usize>();
+
+            assert_eq!(
+                solve_p1(SAMPLE_INPUT, case.1 - 1),
+                total_with.to_string(),
+                "{} cheats, {} picoseconds test case: {} picoseconds expected {} total",
+                case.0,
+                case.1,
+                case.1 - 1,
+                total_with
+            );
+
+            assert_eq!(
+                solve_p1(SAMPLE_INPUT, case.1),
+                total_with.to_string(),
+                "{} cheats, {} picoseconds test case: {} picoseconds expected {} total",
+                case.0,
+                case.1,
+                case.1,
+                total_with
+            );
+            assert_eq!(
+                solve_p1(SAMPLE_INPUT, case.1 + 1),
+                total_without.to_string(),
+                "{} cheats, {} picoseconds test case: {} picoseconds expected {} total",
+                case.0,
+                case.1,
+                case.1 + 1,
+                total_with
+            );
+        });
+
         assert_eq!(p1(SAMPLE_INPUT), "0");
     }
 
@@ -300,6 +326,7 @@ mod tests {
                 total_with
             );
         });
+
         assert_eq!(p2(SAMPLE_INPUT), "0");
     }
 
