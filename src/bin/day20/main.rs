@@ -30,13 +30,25 @@ impl Pos {
             None
         }
     }
+
+    fn add(&self, delta: (i32, i32), bounds: (usize, usize)) -> Option<Self> {
+        let x = self.0 as i32 - delta.0;
+        let y = self.1 as i32 - delta.1;
+
+        if x < 0 || y < 0 || x >= bounds.0 as i32 || y >= bounds.1 as i32 {
+            None
+        } else {
+            Some(Self(x as usize, y as usize))
+        }
+    }
 }
 
 struct Input {
     grid: Vec<Vec<char>>,
-    start: Pos,
-    end: Pos,
     bounds: (usize, usize),
+
+    all_costs: HashMap<Pos, i32>,
+    path: Vec<Pos>,
 }
 
 impl Input {
@@ -69,25 +81,11 @@ impl Input {
 
         let bounds = (grid[0].len(), grid.len());
 
-        Self {
-            grid,
-            start,
-            end,
-            bounds,
-        }
-    }
-}
-
-fn solve_p1(input: &str, limit: i32) -> String {
-    let input = Input::parse_input(input);
-
-    // TODO: path seems unused
-    let (all_costs, _path) = {
         let mut all_costs = HashMap::new();
         let mut path = vec![];
 
         let mut next_cost = 0;
-        let mut next_node = Some(input.start);
+        let mut next_node = Some(start);
 
         while let Some(next) = next_node {
             all_costs.insert(next, next_cost);
@@ -101,13 +99,23 @@ fn solve_p1(input: &str, limit: i32) -> String {
                 Pos(next.0, next.1 + 1),
             ]
             .into_iter()
-            .filter(|pos| input.grid[pos.1][pos.0] == '.')
+            .filter(|pos| grid[pos.1][pos.0] == '.')
             .filter(|pos| !all_costs.contains_key(&pos))
             .next();
         }
 
-        (all_costs, path)
-    };
+        Self {
+            grid,
+            bounds,
+
+            all_costs,
+            path,
+        }
+    }
+}
+
+fn solve_p1(input: &str, limit: i32) -> String {
+    let input = Input::parse_input(input);
 
     (0..input.bounds.1)
         .map(|y| {
@@ -125,7 +133,7 @@ fn solve_p1(input: &str, limit: i32) -> String {
                     .into_iter()
                     .flatten()
                     .filter(|pair_2| input.grid[pair_2.1][pair_2.0] == '.')
-                    .map(|pair_2| all_costs.get(&pair_2).expect("visited before"))
+                    .map(|pair_2| input.all_costs.get(&pair_2).expect("visited before"))
                     .permutations(2)
                     .map(|pairs| pairs[0] - pairs[1] - 2)
                     .filter(|diff| *diff >= limit)
@@ -142,9 +150,36 @@ fn p1(input: &str) -> String {
     solve_p1(input, 100)
 }
 
+fn solve_p2(input: &str, limit: i32) -> String {
+    let input = Input::parse_input(input);
+
+    input
+        .path
+        .iter()
+        .map(|start_cheat| {
+            (-20i32..=20)
+                .map(|dx| {
+                    (-20i32..=20)
+                        .filter(|dy| dx.abs() + dy.abs() <= 20)
+                        .flat_map(|dy| start_cheat.add((dx, dy), input.bounds))
+                        .filter(|end_cheat| input.grid[end_cheat.1][end_cheat.0] == '.')
+                        .map(|end_cheat| {
+                            input.all_costs.get(&end_cheat).expect("visited before")
+                                - input.all_costs.get(&start_cheat).expect("visited before")
+                                - (start_cheat.0 as i32 - end_cheat.0 as i32).abs()
+                                - (start_cheat.1 as i32 - end_cheat.1 as i32).abs()
+                        })
+                        .filter(|diff| *diff >= limit)
+                        .count()
+                })
+                .sum::<usize>()
+        })
+        .sum::<usize>()
+        .to_string()
+}
+
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    solve_p2(input, 100)
 }
 
 fn main() {
@@ -212,12 +247,65 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        let test_cases = [
+            (32, 50),
+            (31, 52),
+            (29, 54),
+            (39, 56),
+            (25, 58),
+            (23, 60),
+            (20, 62),
+            (19, 64),
+            (12, 66),
+            (14, 68),
+            (12, 70),
+            (22, 72),
+            (4, 74),
+            (3, 76),
+        ];
+
+        test_cases.iter().enumerate().for_each(|(case_id, case)| {
+            let total_with = test_cases.iter().skip(case_id).map(|c| c.0).sum::<usize>();
+            let total_without = test_cases
+                .iter()
+                .skip(case_id + 1)
+                .map(|c| c.0)
+                .sum::<usize>();
+
+            assert_eq!(
+                solve_p2(SAMPLE_INPUT, case.1 - 1),
+                total_with.to_string(),
+                "{} cheats, {} picoseconds test case: {} picoseconds expected {} total",
+                case.0,
+                case.1,
+                case.1 - 1,
+                total_with
+            );
+
+            assert_eq!(
+                solve_p2(SAMPLE_INPUT, case.1),
+                total_with.to_string(),
+                "{} cheats, {} picoseconds test case: {} picoseconds expected {} total",
+                case.0,
+                case.1,
+                case.1,
+                total_with
+            );
+            assert_eq!(
+                solve_p2(SAMPLE_INPUT, case.1 + 1),
+                total_without.to_string(),
+                "{} cheats, {} picoseconds test case: {} picoseconds expected {} total",
+                case.0,
+                case.1,
+                case.1 + 1,
+                total_with
+            );
+        });
+        assert_eq!(p2(SAMPLE_INPUT), "0");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "975376");
     }
 }
