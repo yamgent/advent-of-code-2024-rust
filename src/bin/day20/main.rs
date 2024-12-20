@@ -71,7 +71,7 @@ impl Input {
                         }
                     })
                 })
-                .expect(&format!("{} should be in input", character))
+                .unwrap_or_else(|| panic!("{} should be in input", character))
         }
         let start = find_ch(&grid, 'S');
         let end = find_ch(&grid, 'E');
@@ -100,8 +100,7 @@ impl Input {
             ]
             .into_iter()
             .filter(|pos| grid[pos.1][pos.0] == '.')
-            .filter(|pos| !all_costs.contains_key(&pos))
-            .next();
+            .find(|pos| !all_costs.contains_key(pos));
         }
 
         Self {
@@ -165,7 +164,7 @@ fn solve_p2(input: &str, limit: i32) -> String {
                         .filter(|end_cheat| input.grid[end_cheat.1][end_cheat.0] == '.')
                         .map(|end_cheat| {
                             input.all_costs.get(&end_cheat).expect("visited before")
-                                - input.all_costs.get(&start_cheat).expect("visited before")
+                                - input.all_costs.get(start_cheat).expect("visited before")
                                 - (start_cheat.0 as i32 - end_cheat.0 as i32).abs()
                                 - (start_cheat.1 as i32 - end_cheat.1 as i32).abs()
                         })
