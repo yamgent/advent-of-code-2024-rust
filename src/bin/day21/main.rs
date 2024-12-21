@@ -78,7 +78,7 @@ impl NPad {
             LazyLock::new(|| POS_TO_NPAD.iter().map(|(k, v)| (*v, *k)).collect());
         static BOUNDS: (usize, usize) = (3, 4);
 
-        let current_pos = NPAD_TO_POS.get(&self).unwrap();
+        let current_pos = NPAD_TO_POS.get(self).unwrap();
         let new_pos = match dpad {
             DPad::Up => current_pos.up(),
             DPad::Down => current_pos.down(BOUNDS),
@@ -87,7 +87,7 @@ impl NPad {
             DPad::A => return Some(*self),
         };
 
-        new_pos.map(|pos| POS_TO_NPAD.get(&pos).copied()).flatten()
+        new_pos.and_then(|pos| POS_TO_NPAD.get(&pos).copied())
     }
 }
 
@@ -108,7 +108,7 @@ impl DPad {
             LazyLock::new(|| POS_TO_DPAD.iter().map(|(k, v)| (*v, *k)).collect());
         static BOUNDS: (usize, usize) = (3, 2);
 
-        let current_pos = DPAD_TO_POS.get(&self).unwrap();
+        let current_pos = DPAD_TO_POS.get(self).unwrap();
         let new_pos = match dpad {
             DPad::Up => current_pos.up(),
             DPad::Down => current_pos.down(BOUNDS),
@@ -117,7 +117,7 @@ impl DPad {
             DPad::A => return Some(*self),
         };
 
-        new_pos.map(|pos| POS_TO_DPAD.get(&pos).copied()).flatten()
+        new_pos.and_then(|pos| POS_TO_DPAD.get(&pos).copied())
     }
 }
 
