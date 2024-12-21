@@ -121,20 +121,18 @@ impl DPad {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 struct StateNode {
     npad: NPad,
-    dpad_1: DPad,
-    dpad_2: DPad,
+    dpads: Vec<DPad>,
     successes: usize,
 }
 
 impl StateNode {
-    fn start_state() -> Self {
+    fn start_state(total_dpads: usize) -> Self {
         Self {
             npad: NPad::A,
-            dpad_1: DPad::A,
-            dpad_2: DPad::A,
+            dpads: std::iter::repeat(DPad::A).take(total_dpads).collect(),
             successes: 0,
         }
     }
@@ -143,37 +141,65 @@ impl StateNode {
         if self.successes >= sequence.len() {
             None
         } else if dpad != DPad::A {
-            self.dpad_2
-                .handle_dpad_press(dpad)
-                .map(|dpad_2| Self { dpad_2, ..*self })
-        } else if self.dpad_2 != DPad::A {
-            self.dpad_1
-                .handle_dpad_press(self.dpad_2)
-                .map(|dpad_1| Self { dpad_1, ..*self })
-        } else if self.dpad_1 != DPad::A {
-            self.npad
-                .handle_dpad_press(self.dpad_1)
-                .map(|npad| Self { npad, ..*self })
-        } else {
-            let sequence_char = sequence.chars().nth(self.successes).unwrap();
-
-            match (sequence_char, self.npad) {
-                ('A', NPad::A) => Some(Self {
-                    successes: self.successes + 1,
+            self.dpads[0].handle_dpad_press(dpad).map(|dpad| {
+                let mut new_dpads = self.dpads.clone();
+                new_dpads[0] = dpad;
+                Self {
+                    dpads: new_dpads,
                     ..*self
-                }),
-                ('0'..='9', NPad::Number(npad_number)) => {
-                    let sequence_number = sequence_char.to_digit(10).unwrap() as usize;
-                    if npad_number == sequence_number {
-                        Some(Self {
-                            successes: self.successes + 1,
+                }
+            })
+        } else {
+            match self
+                .dpads
+                .iter()
+                .enumerate()
+                .find(|(_, dpad)| **dpad != DPad::A)
+            {
+                Some((dpad_idx, non_a_dpad)) => {
+                    if dpad_idx == self.dpads.len() - 1 {
+                        self.npad.handle_dpad_press(*non_a_dpad).map(|npad| Self {
+                            dpads: self.dpads.clone(),
+                            npad,
                             ..*self
                         })
                     } else {
-                        None
+                        self.dpads[dpad_idx + 1].handle_dpad_press(*non_a_dpad).map(
+                            |affected_dpad| {
+                                let mut new_dpads = self.dpads.clone();
+                                new_dpads[dpad_idx + 1] = affected_dpad;
+                                Self {
+                                    dpads: new_dpads,
+                                    ..*self
+                                }
+                            },
+                        )
                     }
                 }
-                _ => None,
+                None => {
+                    let sequence_char = sequence.chars().nth(self.successes).unwrap();
+
+                    match (sequence_char, self.npad) {
+                        ('A', NPad::A) => Some(Self {
+                            successes: self.successes + 1,
+                            dpads: self.dpads.clone(),
+                            ..*self
+                        }),
+                        ('0'..='9', NPad::Number(npad_number)) => {
+                            let sequence_number = sequence_char.to_digit(10).unwrap() as usize;
+                            if npad_number == sequence_number {
+                                Some(Self {
+                                    successes: self.successes + 1,
+                                    dpads: self.dpads.clone(),
+                                    ..*self
+                                })
+                            } else {
+                                None
+                            }
+                        }
+                        _ => None,
+                    }
+                }
             }
         }
     }
@@ -183,10 +209,10 @@ impl StateNode {
     }
 }
 
-fn find_shortest(line: &str) -> usize {
+fn find_shortest(line: &str, total_dpads: usize) -> usize {
     let mut visited: HashSet<StateNode> = HashSet::new();
 
-    let mut to_process = [(0, StateNode::start_state())]
+    let mut to_process = [(0, StateNode::start_state(total_dpads))]
         .into_iter()
         .collect::<VecDeque<_>>();
 
@@ -199,7 +225,7 @@ fn find_shortest(line: &str) -> usize {
             continue;
         }
 
-        visited.insert(next.1);
+        visited.insert(next.1.clone());
 
         [DPad::Up, DPad::Down, DPad::Left, DPad::Right, DPad::A]
             .into_iter()
@@ -222,7 +248,7 @@ fn p1(input: &str) -> String {
         .trim()
         .lines()
         .map(|line| line.trim())
-        .map(|line| find_shortest(line) * get_numeric(line))
+        .map(|line| find_shortest(line, 2) * get_numeric(line))
         .sum::<usize>()
         .to_string()
 }
