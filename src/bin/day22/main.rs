@@ -56,9 +56,11 @@ fn p2(input: &str) -> String {
                         sliding_window[2],
                         sliding_window[3],
                     );
-                    if !bananas.contains_key(&tuple) {
-                        bananas.insert(tuple, price[idx - 1]);
-                    }
+
+                    // only write down the value when we first seen the tuple
+                    // (when we see it for the second time and etc, the `or_insert()`
+                    // part will not execute again)
+                    bananas.entry(tuple).or_insert(price[idx - 1]);
                     sliding_window.pop_front();
                 }
                 sliding_window.push_back(price[idx] as i64 - price[idx - 1] as i64);
