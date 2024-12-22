@@ -1,3 +1,7 @@
+use std::collections::VecDeque;
+
+use ahash::{HashMap, HashMapExt};
+
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/22/input.txt");
 
 fn next_secret(mut secret: u64) -> u64 {
@@ -22,8 +26,60 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    input
+        .trim()
+        .lines()
+        .map(|line| line.parse::<u64>().expect("a number"))
+        .map(|number| {
+            (0..2000).fold(vec![number], |mut acc, _| {
+                acc.push(next_secret(*acc.last().unwrap()));
+                acc
+            })
+        })
+        .map(|numbers| {
+            numbers
+                .into_iter()
+                .map(|number| number % 10)
+                .collect::<Vec<_>>()
+        })
+        .map(|price| {
+            let mut bananas = HashMap::new();
+
+            let mut idx = 1;
+            let mut sliding_window = VecDeque::new();
+
+            while idx < price.len() {
+                if sliding_window.len() == 4 {
+                    let tuple = (
+                        sliding_window[0],
+                        sliding_window[1],
+                        sliding_window[2],
+                        sliding_window[3],
+                    );
+                    if !bananas.contains_key(&tuple) {
+                        bananas.insert(tuple, price[idx - 1]);
+                    }
+                    sliding_window.pop_front();
+                }
+                sliding_window.push_back(price[idx] as i64 - price[idx - 1] as i64);
+                idx += 1;
+            }
+
+            bananas
+        })
+        .fold(
+            HashMap::new(),
+            |mut acc: HashMap<(i64, i64, i64, i64), u64>, monkey_bananas| {
+                monkey_bananas.into_iter().for_each(|(key, value)| {
+                    *acc.entry(key).or_default() += value;
+                });
+                acc
+            },
+        )
+        .into_values()
+        .max()
+        .expect("input should have answer")
+        .to_string()
 }
 
 fn main() {
@@ -79,12 +135,19 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(
+            p2(r"
+1
+2
+3
+2024
+"),
+            "23"
+        );
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "1710");
     }
 }
