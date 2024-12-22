@@ -1,18 +1,16 @@
-use std::collections::VecDeque;
-
 use ahash::{HashMap, HashMapExt};
+use itertools::Itertools;
 
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/22/input.txt");
 
-fn next_secret(mut secret: u64) -> u64 {
+fn next_secret(secret: u64) -> u64 {
     fn mix_prune(secret: u64, number: u64) -> u64 {
         (secret ^ number) % 16777216
     }
 
-    secret = mix_prune(secret, secret * 64);
-    secret = mix_prune(secret, secret / 32);
-    secret = mix_prune(secret, secret * 2048);
-    secret
+    let secret = mix_prune(secret, secret * 64);
+    let secret = mix_prune(secret, secret / 32);
+    mix_prune(secret, secret * 2048)
 }
 
 fn p1(input: &str) -> String {
@@ -43,31 +41,16 @@ fn p2(input: &str) -> String {
                 .collect::<Vec<_>>()
         })
         .map(|price| {
-            let mut bananas = HashMap::new();
-
-            let mut idx = 1;
-            let mut sliding_window = VecDeque::new();
-
-            while idx < price.len() {
-                if sliding_window.len() == 4 {
-                    let tuple = (
-                        sliding_window[0],
-                        sliding_window[1],
-                        sliding_window[2],
-                        sliding_window[3],
-                    );
-
-                    // only write down the value when we first seen the tuple
-                    // (when we see it for the second time and etc, the `or_insert()`
-                    // part will not execute again)
-                    bananas.entry(tuple).or_insert(price[idx - 1]);
-                    sliding_window.pop_front();
-                }
-                sliding_window.push_back(price[idx] as i64 - price[idx - 1] as i64);
-                idx += 1;
-            }
-
-            bananas
+            price
+                .iter()
+                .zip(price.iter().skip(1))
+                .map(|(a, b)| *a as i64 - *b as i64)
+                .tuple_windows::<(_, _, _, _)>()
+                .enumerate()
+                .fold(HashMap::new(), |mut acc, (idx, sequence)| {
+                    acc.entry(sequence).or_insert(price[idx + 4]);
+                    acc
+                })
         })
         .fold(
             HashMap::new(),
@@ -92,13 +75,6 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    const SAMPLE_INPUT: &str = r"
-1
-10
-100
-2024
-";
 
     #[test]
     fn test_p1_sample() {
@@ -127,7 +103,15 @@ mod tests {
                 assert_eq!(next_secret(*start), *end, "{} -> {}", start, end);
             });
 
-        assert_eq!(p1(SAMPLE_INPUT), "37327623");
+        assert_eq!(
+            p1(r"
+1
+10
+100
+2024
+"),
+            "37327623"
+        );
     }
 
     #[test]
