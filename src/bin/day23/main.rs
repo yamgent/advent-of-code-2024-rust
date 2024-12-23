@@ -1,22 +1,39 @@
+use std::collections::BinaryHeap;
+
 use ahash::{HashMap, HashMapExt, HashSet, HashSetExt};
 
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/23/input.txt");
 
-fn p1(input: &str) -> String {
-    let edges = input
-        .trim()
-        .lines()
-        .map(|line| line.trim().split_once("-").expect("xx-xx"))
-        .collect::<Vec<_>>();
+struct Input<'a> {
+    edges: Vec<(&'a str, &'a str)>,
+    graph: HashMap<&'a str, HashSet<&'a str>>,
+}
 
-    let graph = edges.iter().fold(
-        HashMap::new(),
-        |mut acc: HashMap<&str, HashSet<&str>>, edge| {
-            acc.entry(edge.0).or_default().insert(edge.1);
-            acc.entry(edge.1).or_default().insert(edge.0);
-            acc
-        },
-    );
+impl<'a> Input<'a> {
+    fn parse(input: &'a str) -> Self {
+        let edges = input
+            .trim()
+            .lines()
+            .map(|line| line.trim().split_once("-").expect("xx-xx"))
+            .collect::<Vec<_>>();
+
+        let graph = edges.iter().fold(
+            HashMap::new(),
+            |mut acc: HashMap<&str, HashSet<&str>>, edge| {
+                acc.entry(edge.0).or_default().insert(edge.1);
+                acc.entry(edge.1).or_default().insert(edge.0);
+                acc
+            },
+        );
+
+        Self { edges, graph }
+    }
+}
+
+fn p1(input: &str) -> String {
+    let input = Input::parse(input);
+    let edges = input.edges;
+    let graph = input.graph;
 
     edges
         .iter()
@@ -44,8 +61,45 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    let input = Input::parse(input);
+    let graph = input.graph;
+
+    // problem is akin to the "Clique problem", which is NP-Complete
+    // so aim is to reduce the brute-force necessary
+    // this algorithm is hopefully O(N * 2^13) [13 = number of out-edges]
+    //
+    graph
+        .iter()
+        .flat_map(|(node, neighbours)| {
+            let neighbours = neighbours.iter().collect::<Vec<_>>();
+            (0..(2usize.pow(neighbours.len() as u32)))
+                .map(move |mut choice| {
+                    let mut chosen = vec![*node];
+                    let mut idx = 0;
+                    while choice > 0 {
+                        if choice % 2 == 1 {
+                            chosen.push(neighbours[idx]);
+                        }
+                        choice /= 2;
+                        idx += 1;
+                    }
+                    chosen.sort_unstable();
+                    chosen
+                })
+                .filter(|group| {
+                    group.iter().all(|node| {
+                        group.iter().all(|node_b| {
+                            node == node_b || graph.get(*node).expect("visited").contains(*node_b)
+                        })
+                    })
+                })
+                .map(|group| (group.len(), group))
+        })
+        .collect::<BinaryHeap<_>>()
+        .pop()
+        .expect("input to have an answer")
+        .1
+        .join(",")
 }
 
 fn main() {
@@ -104,12 +158,12 @@ td-yn
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(p2(SAMPLE_INPUT), "co,de,ka,ta");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
+    #[ignore = "np-complete problem, took 19s on local"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "de,id,ke,ls,po,sn,tf,tl,tm,uj,un,xw,yz");
     }
 }
