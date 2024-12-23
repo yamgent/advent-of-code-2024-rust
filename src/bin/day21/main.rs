@@ -244,6 +244,7 @@ fn get_numeric(line: &str) -> usize {
 }
 
 fn p1(input: &str) -> String {
+    //could also use the more efficient `solve(input, 2)`
     input
         .trim()
         .lines()
@@ -253,7 +254,7 @@ fn p1(input: &str) -> String {
         .to_string()
 }
 
-fn p2(input: &str) -> String {
+fn solve(input: &str, max_depth: usize) -> String {
     // solution from: https://www.reddit.com/r/adventofcode/comments/1hjx0x4/2024_day_21_quick_tutorial_to_solve_part_2_in/
     // ^ without this, was difficult to sovle
 
@@ -470,7 +471,7 @@ fn p2(input: &str) -> String {
 
             let min = line_result
                 .iter()
-                .map(|list| shortest_seq(list, 25, &mut shortest_seq_cache, &dirpad_map))
+                .map(|list| shortest_seq(list, max_depth, &mut shortest_seq_cache, &dirpad_map))
                 .min()
                 .expect("one valid seq");
 
@@ -483,6 +484,10 @@ fn p2(input: &str) -> String {
             acc + (min * num)
         })
         .to_string()
+}
+
+fn p2(input: &str) -> String {
+    solve(input, 25)
 }
 
 fn main() {
