@@ -42,9 +42,8 @@ fn p1(input: &str) -> String {
                 .get(edge.0)
                 .expect("visited")
                 .intersection(graph.get(edge.1).expect("visited"))
-                .into_iter()
                 .map(|third| {
-                    let mut nodes = vec![edge.0, edge.1, third];
+                    let mut nodes = [edge.0, edge.1, third];
                     nodes.sort_unstable();
                     (nodes[0], nodes[1], nodes[2])
                 })
