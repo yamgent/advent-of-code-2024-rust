@@ -256,56 +256,54 @@ fn p1(input: &str) -> String {
 
 fn solve(input: &str, max_depth: usize) -> String {
     // solution from: https://www.reddit.com/r/adventofcode/comments/1hjx0x4/2024_day_21_quick_tutorial_to_solve_part_2_in/
-    // ^ without this, was difficult to sovle
+    // ^ without this, was difficult to solve
 
     fn bfs(
-        map: &HashMap<(i32, i32), char>,
-        rev_map: &HashMap<char, (i32, i32)>,
+        graph: &HashMap<(i32, i32), char>,
+        rev_graph: &HashMap<char, (i32, i32)>,
         start: char,
         end: char,
     ) -> Vec<Vec<char>> {
-        let end_pos = rev_map.get(&end).expect("valid node");
+        let end_pos = rev_graph.get(&end).expect("valid node");
 
         let mut result = vec![];
 
         let mut visited = HashSet::new();
-        let mut to_process = vec![(*rev_map.get(&start).expect("valid node"), vec![])];
-        let mut found_end = false;
+        let mut current_level = vec![(*rev_graph.get(&start).expect("valid node"), vec![])];
 
-        while !found_end {
+        while result.is_empty() {
             let mut next_level = vec![];
 
-            while let Some(next_node) = to_process.pop() {
-                if next_node.0 == *end_pos {
-                    found_end = true;
-                    result.push(next_node.1);
+            current_level.into_iter().for_each(|current_node| {
+                if current_node.0 == *end_pos {
+                    result.push(current_node.1);
                 } else {
-                    visited.insert(next_node.0);
+                    visited.insert(current_node.0);
 
                     [
-                        ((next_node.0 .0 - 1, next_node.0 .1), '<'),
-                        ((next_node.0 .0 + 1, next_node.0 .1), '>'),
-                        ((next_node.0 .0, next_node.0 .1 - 1), '^'),
-                        ((next_node.0 .0, next_node.0 .1 + 1), 'v'),
+                        ((current_node.0 .0 - 1, current_node.0 .1), '<'),
+                        ((current_node.0 .0 + 1, current_node.0 .1), '>'),
+                        ((current_node.0 .0, current_node.0 .1 - 1), '^'),
+                        ((current_node.0 .0, current_node.0 .1 + 1), 'v'),
                     ]
                     .into_iter()
                     .filter(|neighbour| !visited.contains(&neighbour.0))
-                    .filter(|neighbour| map.get(&neighbour.0).is_some())
+                    .filter(|neighbour| graph.get(&neighbour.0).is_some())
                     .for_each(|neighbour| {
-                        let mut stack = next_node.1.clone();
-                        stack.push(neighbour.1);
-                        next_level.push((neighbour.0, stack));
+                        let mut path = current_node.1.clone();
+                        path.push(neighbour.1);
+                        next_level.push((neighbour.0, path));
                     });
                 }
-            }
+            });
 
-            to_process = next_level;
+            current_level = next_level;
         }
 
         result
     }
 
-    let numpad_map = {
+    let numpad_seqs = {
         let pos_to_npad = [
             ((0, 0), '7'),
             ((1, 0), '8'),
@@ -327,12 +325,12 @@ fn solve(input: &str, max_depth: usize) -> String {
             .map(|(k, v)| (*v, *k))
             .collect::<HashMap<_, _>>();
 
-        let mut map = HashMap::new();
+        let mut seqs = HashMap::new();
         (0..=9).for_each(|num| {
             let num = char::from_digit(num, 10).unwrap();
 
-            map.insert(('A', num), bfs(&pos_to_npad, &npad_to_pos, 'A', num));
-            map.insert((num, 'A'), bfs(&pos_to_npad, &npad_to_pos, num, 'A'));
+            seqs.insert(('A', num), bfs(&pos_to_npad, &npad_to_pos, 'A', num));
+            seqs.insert((num, 'A'), bfs(&pos_to_npad, &npad_to_pos, num, 'A'));
         });
         (0..=9).for_each(|start| {
             let start = char::from_digit(start, 10).unwrap();
@@ -340,15 +338,15 @@ fn solve(input: &str, max_depth: usize) -> String {
             (0..=9).for_each(|end| {
                 let end = char::from_digit(end, 10).unwrap();
 
-                map.insert((start, end), bfs(&pos_to_npad, &npad_to_pos, start, end));
-                map.insert((end, start), bfs(&pos_to_npad, &npad_to_pos, end, start));
+                seqs.insert((start, end), bfs(&pos_to_npad, &npad_to_pos, start, end));
+                seqs.insert((end, start), bfs(&pos_to_npad, &npad_to_pos, end, start));
             });
         });
-        map
+        seqs
     };
 
     assert_eq!(
-        numpad_map
+        numpad_seqs
             .get(&('7', '0'))
             .unwrap()
             .iter()
@@ -360,7 +358,7 @@ fn solve(input: &str, max_depth: usize) -> String {
             .collect()
     );
 
-    let dirpad_map = {
+    let dirpad_seqs = {
         let pos_to_dpad = [
             ((1, 0), '^'),
             ((2, 0), 'A'),
@@ -376,15 +374,15 @@ fn solve(input: &str, max_depth: usize) -> String {
             .map(|(k, v)| (*v, *k))
             .collect::<HashMap<_, _>>();
 
-        let mut map = HashMap::new();
+        let mut seqs = HashMap::new();
 
         ['^', 'v', '<', '>', 'A'].into_iter().for_each(|start| {
             ['^', 'v', '<', '>', 'A'].into_iter().for_each(|end| {
-                map.insert((start, end), bfs(&pos_to_dpad, &dpad_to_pos, start, end));
-                map.insert((end, start), bfs(&pos_to_dpad, &dpad_to_pos, end, start));
+                seqs.insert((start, end), bfs(&pos_to_dpad, &dpad_to_pos, start, end));
+                seqs.insert((end, start), bfs(&pos_to_dpad, &dpad_to_pos, end, start));
             });
         });
-        map
+        seqs
     };
 
     fn build_seq(
@@ -392,43 +390,53 @@ fn solve(input: &str, max_depth: usize) -> String {
         index: usize,
         prev_key: char,
         curr_path: Vec<char>,
-        result: &mut Vec<Vec<char>>,
-        maps: &HashMap<(char, char), Vec<Vec<char>>>,
-    ) {
-        if index >= keys.len() {
-            result.push(curr_path);
-        } else {
-            maps.get(&(prev_key, keys[index]))
-                .unwrap_or_else(|| panic!("valid map and keys {} {}", prev_key, keys[index]))
-                .iter()
-                .for_each(|path| {
-                    let mut next_path = curr_path.clone();
-                    next_path.extend(path);
-                    next_path.push('A');
+        pad_seqs: &HashMap<(char, char), Vec<Vec<char>>>,
+    ) -> Vec<Vec<char>> {
+        fn build_seq_inner(
+            keys: &[char],
+            index: usize,
+            prev_key: char,
+            curr_path: Vec<char>,
+            pad_seqs: &HashMap<(char, char), Vec<Vec<char>>>,
+            result: &mut Vec<Vec<char>>,
+        ) {
+            if index >= keys.len() {
+                result.push(curr_path);
+            } else {
+                pad_seqs
+                    .get(&(prev_key, keys[index]))
+                    .unwrap_or_else(|| panic!("valid map and keys {} {}", prev_key, keys[index]))
+                    .iter()
+                    .for_each(|path| {
+                        let mut next_path = curr_path.clone();
+                        next_path.extend(path);
+                        next_path.push('A');
 
-                    build_seq(keys, index + 1, keys[index], next_path, result, maps);
-                });
+                        build_seq_inner(keys, index + 1, keys[index], next_path, pad_seqs, result);
+                    });
+            }
         }
+
+        let mut result = vec![];
+        build_seq_inner(keys, index, prev_key, curr_path, pad_seqs, &mut result);
+        result
     }
 
-    {
-        let mut test_result = vec![];
-        build_seq(&['<', 'A'], 0, 'A', vec![], &mut test_result, &dirpad_map);
-
-        assert_eq!(
-            test_result.into_iter().collect::<HashSet<_>>(),
-            ["<v<A>>^A", "<v<A>^>A", "v<<A>>^A", "v<<A>^>A",]
-                .into_iter()
-                .map(|line| line.chars().collect())
-                .collect()
-        );
-    }
+    assert_eq!(
+        build_seq(&['<', 'A'], 0, 'A', vec![], &dirpad_seqs)
+            .into_iter()
+            .collect::<HashSet<_>>(),
+        ["<v<A>>^A", "<v<A>^>A", "v<<A>>^A", "v<<A>^>A",]
+            .into_iter()
+            .map(|line| line.chars().collect())
+            .collect()
+    );
 
     fn shortest_seq(
         keys: &[char],
         depth: usize,
         cache: &mut HashMap<(Vec<char>, usize), usize>,
-        dirpad_map: &HashMap<(char, char), Vec<Vec<char>>>,
+        dirpad_seqs: &HashMap<(char, char), Vec<Vec<char>>>,
     ) -> usize {
         if depth == 0 {
             keys.len()
@@ -446,11 +454,9 @@ fn solve(input: &str, max_depth: usize) -> String {
                 })
                 .into_iter()
                 .fold(0, |acc, subkey| {
-                    let mut seqs = vec![];
-                    build_seq(&subkey, 0, 'A', vec![], &mut seqs, dirpad_map);
-                    acc + seqs
+                    acc + build_seq(&subkey, 0, 'A', vec![], dirpad_seqs)
                         .iter()
-                        .map(|seq| shortest_seq(seq, depth - 1, cache, dirpad_map))
+                        .map(|seq| shortest_seq(seq, depth - 1, cache, dirpad_seqs))
                         .min()
                         .expect("one valid seq")
                 });
@@ -461,17 +467,16 @@ fn solve(input: &str, max_depth: usize) -> String {
     }
 
     let mut shortest_seq_cache = HashMap::new();
+
     input
         .trim()
         .lines()
         .fold(0, |acc, line| {
             let line = line.trim().chars().collect::<Vec<_>>();
-            let mut line_result = vec![];
-            build_seq(&line, 0, 'A', vec![], &mut line_result, &numpad_map);
 
-            let min = line_result
+            let min = build_seq(&line, 0, 'A', vec![], &numpad_seqs)
                 .iter()
-                .map(|list| shortest_seq(list, max_depth, &mut shortest_seq_cache, &dirpad_map))
+                .map(|list| shortest_seq(list, max_depth, &mut shortest_seq_cache, &dirpad_seqs))
                 .min()
                 .expect("one valid seq");
 
