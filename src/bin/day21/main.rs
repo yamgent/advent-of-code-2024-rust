@@ -1,6 +1,6 @@
 use std::{collections::VecDeque, sync::LazyLock};
 
-use ahash::{HashMap, HashSet, HashSetExt};
+use ahash::{HashMap, HashMapExt, HashSet, HashSetExt};
 
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/21/input.txt");
 
@@ -254,8 +254,235 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    // solution from: https://www.reddit.com/r/adventofcode/comments/1hjx0x4/2024_day_21_quick_tutorial_to_solve_part_2_in/
+    // ^ without this, was difficult to sovle
+
+    fn bfs(
+        map: &HashMap<(i32, i32), char>,
+        rev_map: &HashMap<char, (i32, i32)>,
+        start: char,
+        end: char,
+    ) -> Vec<Vec<char>> {
+        let end_pos = rev_map.get(&end).expect("valid node");
+
+        let mut result = vec![];
+
+        let mut visited = HashSet::new();
+        let mut to_process = vec![(*rev_map.get(&start).expect("valid node"), vec![])];
+        let mut found_end = false;
+
+        while !found_end {
+            let mut next_level = vec![];
+
+            while let Some(next_node) = to_process.pop() {
+                if next_node.0 == *end_pos {
+                    found_end = true;
+                    result.push(next_node.1);
+                } else {
+                    visited.insert(next_node.0);
+
+                    [
+                        ((next_node.0 .0 - 1, next_node.0 .1), '<'),
+                        ((next_node.0 .0 + 1, next_node.0 .1), '>'),
+                        ((next_node.0 .0, next_node.0 .1 - 1), '^'),
+                        ((next_node.0 .0, next_node.0 .1 + 1), 'v'),
+                    ]
+                    .into_iter()
+                    .filter(|neighbour| !visited.contains(&neighbour.0))
+                    .filter(|neighbour| map.get(&neighbour.0).is_some())
+                    .for_each(|neighbour| {
+                        let mut stack = next_node.1.clone();
+                        stack.push(neighbour.1);
+                        next_level.push((neighbour.0, stack));
+                    });
+                }
+            }
+
+            to_process = next_level;
+        }
+
+        result
+    }
+
+    let numpad_map = {
+        let pos_to_npad = [
+            ((0, 0), '7'),
+            ((1, 0), '8'),
+            ((2, 0), '9'),
+            ((0, 1), '4'),
+            ((1, 1), '5'),
+            ((2, 1), '6'),
+            ((0, 2), '1'),
+            ((1, 2), '2'),
+            ((2, 2), '3'),
+            ((1, 3), '0'),
+            ((2, 3), 'A'),
+        ]
+        .into_iter()
+        .collect::<HashMap<_, _>>();
+
+        let npad_to_pos = pos_to_npad
+            .iter()
+            .map(|(k, v)| (*v, *k))
+            .collect::<HashMap<_, _>>();
+
+        let mut map = HashMap::new();
+        (0..=9).for_each(|num| {
+            let num = char::from_digit(num, 10).unwrap();
+
+            map.insert(('A', num), bfs(&pos_to_npad, &npad_to_pos, 'A', num));
+            map.insert((num, 'A'), bfs(&pos_to_npad, &npad_to_pos, num, 'A'));
+        });
+        (0..=9).for_each(|start| {
+            let start = char::from_digit(start, 10).unwrap();
+
+            (0..=9).for_each(|end| {
+                let end = char::from_digit(end, 10).unwrap();
+
+                map.insert((start, end), bfs(&pos_to_npad, &npad_to_pos, start, end));
+                map.insert((end, start), bfs(&pos_to_npad, &npad_to_pos, end, start));
+            });
+        });
+        map
+    };
+
+    assert_eq!(
+        numpad_map
+            .get(&('7', '0'))
+            .unwrap()
+            .iter()
+            .cloned()
+            .collect::<HashSet<_>>(),
+        [">vvv", "v>vv", "vv>v"]
+            .into_iter()
+            .map(|line| line.chars().collect())
+            .collect()
+    );
+
+    let dirpad_map = {
+        let pos_to_dpad = [
+            ((1, 0), '^'),
+            ((2, 0), 'A'),
+            ((0, 1), '<'),
+            ((1, 1), 'v'),
+            ((2, 1), '>'),
+        ]
+        .into_iter()
+        .collect::<HashMap<_, _>>();
+
+        let dpad_to_pos = pos_to_dpad
+            .iter()
+            .map(|(k, v)| (*v, *k))
+            .collect::<HashMap<_, _>>();
+
+        let mut map = HashMap::new();
+
+        ['^', 'v', '<', '>', 'A'].into_iter().for_each(|start| {
+            ['^', 'v', '<', '>', 'A'].into_iter().for_each(|end| {
+                map.insert((start, end), bfs(&pos_to_dpad, &dpad_to_pos, start, end));
+                map.insert((end, start), bfs(&pos_to_dpad, &dpad_to_pos, end, start));
+            });
+        });
+        map
+    };
+
+    fn build_seq(
+        keys: &[char],
+        index: usize,
+        prev_key: char,
+        curr_path: Vec<char>,
+        result: &mut Vec<Vec<char>>,
+        maps: &HashMap<(char, char), Vec<Vec<char>>>,
+    ) {
+        if index >= keys.len() {
+            result.push(curr_path);
+        } else {
+            maps.get(&(prev_key, keys[index]))
+                .unwrap_or_else(|| panic!("valid map and keys {} {}", prev_key, keys[index]))
+                .iter()
+                .for_each(|path| {
+                    let mut next_path = curr_path.clone();
+                    next_path.extend(path);
+                    next_path.push('A');
+
+                    build_seq(keys, index + 1, keys[index], next_path, result, maps);
+                });
+        }
+    }
+
+    {
+        let mut test_result = vec![];
+        build_seq(&['<', 'A'], 0, 'A', vec![], &mut test_result, &dirpad_map);
+
+        assert_eq!(
+            test_result.into_iter().collect::<HashSet<_>>(),
+            ["<v<A>>^A", "<v<A>^>A", "v<<A>>^A", "v<<A>^>A",]
+                .into_iter()
+                .map(|line| line.chars().collect())
+                .collect()
+        );
+    }
+
+    fn shortest_seq<'a>(
+        keys: &[char],
+        depth: usize,
+        cache: &mut HashMap<(Vec<char>, usize), usize>,
+        dirpad_map: &HashMap<(char, char), Vec<Vec<char>>>,
+    ) -> usize {
+        if depth == 0 {
+            keys.len()
+        } else if let Some(value) = cache.get(&(keys.iter().copied().collect(), depth)) {
+            *value
+        } else {
+            let total = keys
+                .iter()
+                .fold(vec![vec![]], |mut acc, key| {
+                    acc.last_mut().unwrap().push(*key);
+                    if *key == 'A' {
+                        acc.push(vec![]);
+                    }
+                    acc
+                })
+                .into_iter()
+                .fold(0, |acc, subkey| {
+                    let mut seqs = vec![];
+                    build_seq(&subkey, 0, 'A', vec![], &mut seqs, dirpad_map);
+                    acc + seqs
+                        .iter()
+                        .map(|seq| shortest_seq(seq, depth - 1, cache, dirpad_map))
+                        .min()
+                        .expect("one valid seq")
+                });
+
+            cache.insert((keys.iter().copied().collect(), depth), total);
+            total
+        }
+    }
+
+    let mut shortest_seq_cache = HashMap::new();
+    input
+        .trim()
+        .lines()
+        .fold(0, |acc, line| {
+            let line = line.trim().chars().collect::<Vec<_>>();
+            let mut line_result = vec![];
+            build_seq(&line, 0, 'A', vec![], &mut line_result, &numpad_map);
+
+            let min = line_result
+                .iter()
+                .map(|list| shortest_seq(&list, 25, &mut shortest_seq_cache, &dirpad_map))
+                .min()
+                .expect("one valid seq");
+
+            let num = line[0..(line.len() - 1)]
+                .iter()
+                .collect::<String>()
+                .parse::<usize>()
+                .expect("a number");
+
+            acc + (min * num)
+        })
+        .to_string()
 }
 
 fn main() {
@@ -287,12 +514,11 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(p2(SAMPLE_INPUT), "154115708116294");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "307055584161760");
     }
 }
