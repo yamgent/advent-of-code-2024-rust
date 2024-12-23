@@ -135,7 +135,7 @@ fn p2_cheat(input: &str) -> String {
                 })
         })
         .next()
-        .expect("input to have an answer")
+        .expect("assumption that input is specially constructed such that clique size = max outdegree. if not, then too bad")
         .iter()
         .map(|x| **x)
         .collect::<Vec<_>>()
