@@ -423,7 +423,7 @@ fn p2(input: &str) -> String {
         );
     }
 
-    fn shortest_seq<'a>(
+    fn shortest_seq(
         keys: &[char],
         depth: usize,
         cache: &mut HashMap<(Vec<char>, usize), usize>,
@@ -431,7 +431,7 @@ fn p2(input: &str) -> String {
     ) -> usize {
         if depth == 0 {
             keys.len()
-        } else if let Some(value) = cache.get(&(keys.iter().copied().collect(), depth)) {
+        } else if let Some(value) = cache.get(&(keys.to_vec(), depth)) {
             *value
         } else {
             let total = keys
@@ -454,7 +454,7 @@ fn p2(input: &str) -> String {
                         .expect("one valid seq")
                 });
 
-            cache.insert((keys.iter().copied().collect(), depth), total);
+            cache.insert((keys.to_vec(), depth), total);
             total
         }
     }
@@ -470,7 +470,7 @@ fn p2(input: &str) -> String {
 
             let min = line_result
                 .iter()
-                .map(|list| shortest_seq(&list, 25, &mut shortest_seq_cache, &dirpad_map))
+                .map(|list| shortest_seq(list, 25, &mut shortest_seq_cache, &dirpad_map))
                 .min()
                 .expect("one valid seq");
 
