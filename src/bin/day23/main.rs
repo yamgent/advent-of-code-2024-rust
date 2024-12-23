@@ -101,6 +101,47 @@ fn p2(input: &str) -> String {
         .join(",")
 }
 
+// this is "impossible" to write without knowing the answer in the first
+// place, because we have no way of knowing that the input is specially
+// constructed in a way, such that the max clique size answer is always
+// out_edges. If we know that, then the algorithm would be O(N * 13).
+// But again, you can't reasonably know this until you have already solved
+// day 23.
+#[allow(dead_code)]
+fn p2_cheat(input: &str) -> String {
+    let input = Input::parse(input);
+    let graph = input.graph;
+
+    graph
+        .iter()
+        .flat_map(|(node, neighbours)| {
+            neighbours
+                .iter()
+                .map(|delete| {
+                    let mut chosen = neighbours
+                        .iter()
+                        .filter(|node| *node != delete)
+                        .collect::<Vec<_>>();
+                    chosen.push(node);
+                    chosen.sort_unstable();
+                    chosen
+                })
+                .filter(|group| {
+                    group.iter().all(|node| {
+                        group.iter().all(|node_b| {
+                            node == node_b || graph.get(*node).expect("visited").contains(*node_b)
+                        })
+                    })
+                })
+        })
+        .next()
+        .expect("input to have an answer")
+        .iter()
+        .map(|x| **x)
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
 fn main() {
     println!("{}", p1(ACTUAL_INPUT));
     println!("{}", p2(ACTUAL_INPUT));
@@ -164,5 +205,18 @@ td-yn
     #[ignore = "np-complete problem, took 19s on local"]
     fn test_p2_actual() {
         assert_eq!(p2(ACTUAL_INPUT), "de,id,ke,ls,po,sn,tf,tl,tm,uj,un,xw,yz");
+    }
+
+    #[test]
+    fn test_p2_cheat_sample() {
+        assert_eq!(p2_cheat(SAMPLE_INPUT), "co,de,ka,ta");
+    }
+
+    #[test]
+    fn test_p2_cheat_actual() {
+        assert_eq!(
+            p2_cheat(ACTUAL_INPUT),
+            "de,id,ke,ls,po,sn,tf,tl,tm,uj,un,xw,yz"
+        );
     }
 }
