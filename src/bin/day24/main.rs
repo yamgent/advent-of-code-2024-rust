@@ -175,14 +175,14 @@ fn cure_p2(mut input: Input) -> Input {
 }
 
 fn p2(input: &str) -> String {
-    let input = cure_p2(Input::parse_input(&input));
+    let input = cure_p2(Input::parse_input(input));
 
     let mut output = String::new();
 
     output.push_str("digraph G {\n");
 
     let mut number = 0;
-    while input.wires.get(&get_x(number)).is_some() {
+    while input.wires.contains_key(&get_x(number)) {
         output.push_str(&format!(
             r#"  subgraph c_{} {{
     {} [style=filled,fillcolor=green];
