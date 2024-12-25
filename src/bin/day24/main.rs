@@ -2,14 +2,14 @@ use ahash::{HashMap, HashMapExt};
 
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/24/input.txt");
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 enum Operator {
     And,
     Or,
     Xor,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 struct Gate {
     inputs: [String; 2],
     output: String,
@@ -209,20 +209,24 @@ fn p2(input: &str) -> String {
     });
     */
 
-    let rev_gates =
-        input
-            .gates
-            .values()
-            .fold(HashMap::new(), |mut acc: HashMap<String, Gate>, gates| {
-                gates.iter().for_each(|gate| {
-                    if !acc.contains_key(&gate.output) {
-                        acc.insert(gate.output.clone(), gate.clone());
-                    }
-                });
-                acc
+    let mut rev_gates = input
+        .gates
+        .values()
+        .fold(HashMap::new(), |mut acc: HashMap<String, Gate>, gates| {
+            gates.iter().for_each(|gate| {
+                if !acc.contains_key(&gate.output) {
+                    acc.insert(gate.output.clone(), gate.clone());
+                }
             });
+            acc
+        })
+        .values()
+        .cloned()
+        .collect::<Vec<_>>();
 
-    rev_gates.values().for_each(|gate| {
+    rev_gates.sort();
+
+    rev_gates.into_iter().for_each(|gate| {
         let out_color = match gate.operator {
             Operator::And => "red",
             Operator::Or => "yellow",
