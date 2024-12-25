@@ -115,13 +115,145 @@ fn p1(input: &str) -> String {
     acc.to_string()
 }
 
+fn get_z(number: usize) -> String {
+    format!("z{}{}", if number > 9 { "" } else { "0" }, number)
+}
+
+fn get_y(number: usize) -> String {
+    format!("y{}{}", if number > 9 { "" } else { "0" }, number)
+}
+
+fn get_x(number: usize) -> String {
+    format!("x{}{}", if number > 9 { "" } else { "0" }, number)
+}
+
+// FOR P2:
+// manual solve and eyeball
+//
+// equations:
+// x_n ^ y_n = insum_n
+// carry_{n-1} ^ insum_n = sum_n (zNN)
+// x_n & y_n = subcarry_n
+// carry_{n-1} & insum_n = supercarry_n
+// subcarry_n | supercarry_n = carry_n
+const P2_CURE: [(&str, &str); 4] = [
+    ("z10", "kmb"),
+    ("z15", "tvp"),
+    ("z25", "dpg"),
+    ("mmf", "vdk"),
+];
+
+fn cure_p2(mut input: Input) -> Input {
+    P2_CURE.iter().for_each(|cure| {
+        input.gates.values_mut().for_each(|gates| {
+            gates
+                .iter_mut()
+                .filter(|gate| gate.output == cure.0)
+                .for_each(|gate| {
+                    gate.output = "*****".to_string();
+                });
+        });
+        input.gates.values_mut().for_each(|gates| {
+            gates
+                .iter_mut()
+                .filter(|gate| gate.output == cure.1)
+                .for_each(|gate| {
+                    gate.output = cure.0.to_string();
+                });
+        });
+        input.gates.values_mut().for_each(|gates| {
+            gates
+                .iter_mut()
+                .filter(|gate| gate.output == "*****")
+                .for_each(|gate| {
+                    gate.output = cure.1.to_string();
+                });
+        });
+    });
+
+    input
+}
+
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    let input = cure_p2(Input::parse_input(&input));
+
+    let mut output = String::new();
+
+    output.push_str("digraph G {\n");
+
+    let mut number = 0;
+    while input.wires.get(&get_x(number)).is_some() {
+        output.push_str(&format!(
+            r#"  subgraph c_{} {{
+    {} [style=filled,fillcolor=green];
+    {} [style=filled,fillcolor=green];
+    {}
+  }}
+"#,
+            number,
+            get_x(number),
+            get_y(number),
+            get_z(number),
+        ));
+        number += 1;
+    }
+
+    /*
+    let max_number = number - 1;
+
+    (0..max_number).for_each(|wire| {
+        output.push_str(&format!(
+            "  {} [style=filled,fillcolor=blue];\n",
+            get_z(wire)
+        ));
+    });
+    */
+
+    let rev_gates =
+        input
+            .gates
+            .values()
+            .fold(HashMap::new(), |mut acc: HashMap<String, Gate>, gates| {
+                gates.iter().for_each(|gate| {
+                    if !acc.contains_key(&gate.output) {
+                        acc.insert(gate.output.clone(), gate.clone());
+                    }
+                });
+                acc
+            });
+
+    rev_gates.values().for_each(|gate| {
+        let out_color = match gate.operator {
+            Operator::And => "red",
+            Operator::Or => "yellow",
+            Operator::Xor => "blue",
+        };
+
+        output.push_str(&format!(
+            "  {} [style=filled,fillcolor={}];\n",
+            gate.output, out_color
+        ));
+
+        output.push_str(&format!("  {} -> {}\n", gate.inputs[0], gate.output));
+        output.push_str(&format!("  {} -> {}\n", gate.inputs[1], gate.output));
+    });
+
+    output.push_str("}\n");
+
+    output
 }
 
 fn main() {
-    println!("{}", p1(ACTUAL_INPUT));
+    // disable p1 for this day, so that p2 output can be piped to a file immediately
+    //println!("{}", p1(ACTUAL_INPUT));
+    let _ = p1(ACTUAL_INPUT);
+
+    // how to use this output:
+    //      - prerequisite: `sudo apt install graphviz`
+    //      - 1: `cd src/bin/day24/`
+    //      - 2: `cargo r --bin day24 > graph.dot`
+    //      - 3: `dot -Tsvg graph.dot > output.svg`
+    //      - 4: View file in SVG viewer
     println!("{}", p2(ACTUAL_INPUT));
 }
 
@@ -201,5 +333,16 @@ tnw OR pbm -> gnj
     #[test]
     fn test_p1_actual() {
         assert_eq!(p1(ACTUAL_INPUT), "51715173446832");
+    }
+
+    #[test]
+    fn test_p2_actual() {
+        let mut cure_values = P2_CURE
+            .iter()
+            .flat_map(|vals| vec![vals.0, vals.1])
+            .collect::<Vec<_>>();
+        cure_values.sort_unstable();
+
+        assert_eq!(cure_values.join(","), "dpg,kmb,mmf,tvp,vdk,z10,z15,z25");
     }
 }
