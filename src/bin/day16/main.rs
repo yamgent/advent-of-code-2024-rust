@@ -1,4 +1,7 @@
-use std::{cmp::Reverse, collections::BinaryHeap};
+use std::{
+    cmp::Reverse,
+    collections::{BinaryHeap, VecDeque},
+};
 
 use ahash::{HashMap, HashMapExt, HashSet, HashSetExt};
 
@@ -116,6 +119,8 @@ impl Map {
                         pos,
                         direction: new_dir,
                         prev_pos: cur_node.pos,
+                        prev_dir: cur_node.direction,
+                        prev_cost: cur_node.cost,
                     })
                 } else {
                     None
@@ -152,38 +157,57 @@ struct PathNode {
     pos: Pos,
     direction: Direction,
     prev_pos: Pos,
+    prev_dir: Direction,
+    prev_cost: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct ParentPrevious {
+    current_direction: Direction,
+    current_pos: Pos,
+    parent_direction: Direction,
+    parent_pos: Pos,
+    reach_cost: usize,
+    parent_cost: usize,
 }
 
 #[derive(Debug)]
 struct Parents {
-    cost: usize,
-    previous: HashSet<Pos>,
+    minimum_cost: usize,
+    previous: HashMap<(Pos, Direction), ParentPrevious>,
 }
 
 impl Default for Parents {
     fn default() -> Self {
         Self {
-            cost: usize::MAX,
-            previous: HashSet::new(),
+            minimum_cost: usize::MAX,
+            previous: HashMap::new(),
         }
     }
 }
 
 impl Parents {
     fn register(&mut self, candidate: &PathNode) -> bool {
-        match candidate.cost.cmp(&self.cost) {
-            std::cmp::Ordering::Greater => false,
-            std::cmp::Ordering::Equal => {
-                self.previous.insert(candidate.prev_pos);
-                true
-            }
-            std::cmp::Ordering::Less => {
-                self.previous.clear();
-                self.cost = candidate.cost;
-                self.previous.insert(candidate.prev_pos);
-                true
-            }
+        self.minimum_cost = self.minimum_cost.min(candidate.cost);
+
+        let key = (candidate.prev_pos, candidate.prev_dir);
+        let seen_before = self.previous.contains_key(&key);
+
+        if !seen_before {
+            self.previous.insert(
+                key,
+                ParentPrevious {
+                    current_direction: candidate.direction,
+                    current_pos: candidate.pos,
+                    parent_direction: candidate.prev_dir,
+                    parent_pos: candidate.prev_pos,
+                    reach_cost: candidate.cost,
+                    parent_cost: candidate.prev_cost,
+                },
+            );
         }
+
+        !seen_before
     }
 }
 
@@ -204,6 +228,8 @@ fn solve(input: &str, solution: Solution) -> String {
         pos: input.start,
         direction: Direction::Right,
         prev_pos: input.start,
+        prev_dir: Direction::Right,
+        prev_cost: 0,
     }]
     .into_iter()
     .collect::<MinHeap<_>>();
@@ -231,15 +257,68 @@ fn solve(input: &str, solution: Solution) -> String {
             to_process.push(path_node);
         });
     }
+    let end_cost = parents
+        .get(&input.end)
+        .expect("end is not blocked")
+        .minimum_cost;
 
     if solution == Solution::Part1 {
-        parents
-            .get(&input.end)
-            .expect("end is not blocked")
-            .cost
-            .to_string()
+        end_cost.to_string()
     } else {
-        "".to_string()
+        //let mut visited = [(input.end)].into_iter().collect::<HashSet<_>>();
+
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        struct ToProcess {
+            pos: Pos,
+            //direction: Direction,
+            cost: usize,
+        }
+
+        //let mut to_process = parents
+        //    .get(&input.end)
+        //    .expect("visited before")
+        //    .previous
+        //    .values()
+        //    .filter(|val| val.reach_cost == end_cost)
+        //    .map(|val| ToProcess {
+        //        pos: val.parent_pos,
+        //        //direction: val.parent_direction,
+        //        cost: val.parent_cost,
+        //    })
+        //    .collect::<VecDeque<_>>();
+        //
+        let mut visited = HashSet::new();
+        let mut to_process = [ToProcess {
+            pos: input.end,
+            cost: end_cost,
+        }]
+        .into_iter()
+        .collect::<VecDeque<_>>();
+
+        while let Some(next_to_process) = to_process.pop_front() {
+            visited.insert(next_to_process.pos);
+
+            if next_to_process.pos == input.start {
+                continue;
+            }
+
+            parents
+                .get(&next_to_process.pos)
+                .expect("visited before")
+                .previous
+                .values()
+                .filter(|val| val.reach_cost == next_to_process.cost)
+                .map(|val| ToProcess {
+                    pos: val.parent_pos,
+                    //direction: val.parent_direction,
+                    cost: val.parent_cost,
+                })
+                .for_each(|val| {
+                    to_process.push_back(val);
+                });
+        }
+
+        visited.len().to_string()
     }
 }
 
@@ -311,6 +390,10 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
+        // shortest path is 2006
+        // at (3, 1), there are two paths.
+        //      - 1 is facing >, cost 2005 [still a valid path, even if not min at this point]
+        //      - 1 is facing ^, cost 1005
         assert_eq!(
             p2(r"
 ######
@@ -320,15 +403,14 @@ mod tests {
 #S..##
 ######
 "),
-            ""
-        ); // 11
-        assert_eq!(p2(SAMPLE_INPUT_1), ""); // 45
-        assert_eq!(p2(SAMPLE_INPUT_2), ""); // 64
+            "11"
+        );
+        assert_eq!(p2(SAMPLE_INPUT_1), "45");
+        assert_eq!(p2(SAMPLE_INPUT_2), "64");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "583");
     }
 }
