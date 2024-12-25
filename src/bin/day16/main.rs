@@ -66,10 +66,7 @@ impl Map {
     }
 
     fn get(&self, pos: Pos) -> Option<char> {
-        self.grid
-            .iter()
-            .nth(pos.1)
-            .and_then(|row| row.iter().nth(pos.0).copied())
+        self.grid.get(pos.1).and_then(|row| row.get(pos.0).copied())
     }
 
     fn go_dir(&self, cur_node: PathNode, new_dir: Direction) -> Option<PathNode> {
