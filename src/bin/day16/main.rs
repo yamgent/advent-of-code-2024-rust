@@ -311,7 +311,19 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT_1), "");
+        assert_eq!(
+            p2(r"
+######
+#...E#
+#.#.##
+#.#.##
+#S..##
+######
+"),
+            ""
+        ); // 11
+        assert_eq!(p2(SAMPLE_INPUT_1), ""); // 45
+        assert_eq!(p2(SAMPLE_INPUT_2), ""); // 64
     }
 
     #[test]
