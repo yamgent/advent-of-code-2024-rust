@@ -16,45 +16,60 @@ struct Gate {
     operator: Operator,
 }
 
+struct Input {
+    wires: HashMap<String, usize>,
+    gates: HashMap<String, Vec<Gate>>,
+}
+
+impl Input {
+    fn parse_input(input: &str) -> Self {
+        let (wires, gates) = input
+            .trim()
+            .split_once("\n\n")
+            .expect("input has two sections");
+
+        let wires = wires
+            .trim()
+            .lines()
+            .map(|line| line.split_once(": ").expect("xXX: X"))
+            .map(|(wire, val)| (wire.to_string(), val.parse::<usize>().expect("0 or 1")))
+            .collect::<HashMap<_, _>>();
+
+        let gates = gates
+            .trim()
+            .lines()
+            .map(|line| line.split(" ").collect::<Vec<_>>())
+            .map(|line| Gate {
+                inputs: [line[0].to_string(), line[2].to_string()],
+                output: line[4].to_string(),
+                operator: match line[1] {
+                    "AND" => Operator::And,
+                    "OR" => Operator::Or,
+                    "XOR" => Operator::Xor,
+                    _ => panic!("Unknown operator {}", line[1]),
+                },
+            })
+            .fold(
+                HashMap::new(),
+                |mut acc: HashMap<String, Vec<Gate>>, gate| {
+                    acc.entry(gate.inputs[0].clone())
+                        .or_default()
+                        .push(gate.clone());
+                    acc.entry(gate.inputs[1].clone())
+                        .or_default()
+                        .push(gate.clone());
+                    acc
+                },
+            );
+
+        Self { wires, gates }
+    }
+}
+
 fn p1(input: &str) -> String {
-    let (wires, gates) = input
-        .trim()
-        .split_once("\n\n")
-        .expect("input has two sections");
-
-    let mut wires = wires
-        .trim()
-        .lines()
-        .map(|line| line.split_once(": ").expect("xXX: X"))
-        .map(|(wire, val)| (wire.to_string(), val.parse::<usize>().expect("0 or 1")))
-        .collect::<HashMap<_, _>>();
-
-    let gates = gates
-        .trim()
-        .lines()
-        .map(|line| line.split(" ").collect::<Vec<_>>())
-        .map(|line| Gate {
-            inputs: [line[0].to_string(), line[2].to_string()],
-            output: line[4].to_string(),
-            operator: match line[1] {
-                "AND" => Operator::And,
-                "OR" => Operator::Or,
-                "XOR" => Operator::Xor,
-                _ => panic!("Unknown operator {}", line[1]),
-            },
-        })
-        .fold(
-            HashMap::new(),
-            |mut acc: HashMap<String, Vec<Gate>>, gate| {
-                acc.entry(gate.inputs[0].clone())
-                    .or_default()
-                    .push(gate.clone());
-                acc.entry(gate.inputs[1].clone())
-                    .or_default()
-                    .push(gate.clone());
-                acc
-            },
-        );
+    let input = Input::parse_input(input);
+    let mut wires = input.wires;
+    let gates = input.gates;
 
     let mut to_process = wires.keys().cloned().collect::<Vec<_>>();
 
@@ -186,16 +201,5 @@ tnw OR pbm -> gnj
     #[test]
     fn test_p1_actual() {
         assert_eq!(p1(ACTUAL_INPUT), "51715173446832");
-    }
-
-    #[test]
-    fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT_1), "");
-    }
-
-    #[test]
-    #[ignore = "not yet implemented"]
-    fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
     }
 }
