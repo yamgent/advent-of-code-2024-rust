@@ -1,10 +1,10 @@
 use std::{cmp::Reverse, collections::BinaryHeap};
 
-use ahash::{HashSet, HashSetExt};
+use ahash::{HashMap, HashMapExt, HashSet, HashSetExt};
 
 const ACTUAL_INPUT: &str = include_str!("../../../actual_inputs/2024/16/input.txt");
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum Direction {
     Up,
     Down,
@@ -12,202 +12,243 @@ enum Direction {
     Right,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-struct Pos(usize, usize, Direction);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct Pos(usize, usize);
 
 impl Pos {
-    fn advance(&self, bounds: (usize, usize)) -> Option<Self> {
-        match self.2 {
-            Direction::Up => self.1.checked_sub(1).map(|y| (self.0, y)),
-            Direction::Down => {
-                if self.1 + 1 >= bounds.1 {
-                    None
-                } else {
-                    Some((self.0, self.1 + 1))
-                }
-            }
-            Direction::Left => self.0.checked_sub(1).map(|x| (x, self.1)),
-            Direction::Right => {
-                if self.0 + 1 >= bounds.0 {
-                    None
-                } else {
-                    Some((self.0 + 1, self.1))
-                }
-            }
+    fn add(&self, delta: (i64, i64), bounds: (usize, usize)) -> Option<Self> {
+        let x = (self.0 as i64) + delta.0;
+        let y = (self.1 as i64) + delta.1;
+        if x >= 0 && y >= 0 && x < (bounds.0 as i64) && y < (bounds.1 as i64) {
+            Some(Pos(x as usize, y as usize))
+        } else {
+            None
         }
-        .map(|coord| Self(coord.0, coord.1, self.2))
-    }
-
-    fn rotate_left(&self) -> Self {
-        Self(
-            self.0,
-            self.1,
-            match self.2 {
-                Direction::Up => Direction::Left,
-                Direction::Down => Direction::Right,
-                Direction::Left => Direction::Down,
-                Direction::Right => Direction::Up,
-            },
-        )
-    }
-
-    fn rotate_right(&self) -> Self {
-        Self(
-            self.0,
-            self.1,
-            match self.2 {
-                Direction::Up => Direction::Right,
-                Direction::Down => Direction::Left,
-                Direction::Left => Direction::Up,
-                Direction::Right => Direction::Down,
-            },
-        )
     }
 }
 
-struct Input {
-    start_pos: Pos,
-    end_pos: Pos,
+struct Map {
     grid: Vec<Vec<char>>,
+    start: Pos,
+    end: Pos,
 }
 
-fn find_known_character_in_grid(grid: &[Vec<char>], character: char, direction: Direction) -> Pos {
-    grid.iter()
-        .enumerate()
-        .find_map(|(y, row)| {
-            row.iter().enumerate().find_map(|(x, cell)| {
-                if *cell == character {
-                    Some(Pos(x, y, direction))
-                } else {
-                    None
-                }
-            })
-        })
-        .unwrap_or_else(|| panic!("{} to exist in input", character))
-}
-
-impl Input {
+impl Map {
     fn parse_input(input: &str) -> Self {
         let mut grid = input
             .trim()
             .lines()
-            .map(|line| line.chars().collect::<Vec<_>>())
+            .map(|line| line.trim().chars().collect::<Vec<_>>())
             .collect::<Vec<_>>();
 
-        let start_pos = find_known_character_in_grid(&grid, 'S', Direction::Right);
-        let end_pos = find_known_character_in_grid(&grid, 'E', Direction::Right);
-
-        grid[start_pos.1][start_pos.0] = '.';
-        grid[end_pos.1][end_pos.0] = '.';
-
-        Self {
-            start_pos,
-            end_pos,
-            grid,
+        fn find(grid: &[Vec<char>], character: char) -> Option<Pos> {
+            grid.iter().enumerate().find_map(|(y, row)| {
+                row.iter()
+                    .enumerate()
+                    .find(|(_, ch)| **ch == character)
+                    .map(|(x, _)| Pos(x, y))
+            })
         }
+
+        let start = find(&grid, 'S').expect("S in input");
+        let end = find(&grid, 'E').expect("E in input");
+        grid[start.1][start.0] = '.';
+        grid[end.1][end.0] = '.';
+
+        Self { grid, start, end }
     }
 
-    fn simulate_p1(self) -> u64 {
-        let bounds = (self.grid[0].len(), self.grid.len());
-        let mut visited = HashSet::new();
+    fn bounds(&self) -> (usize, usize) {
+        (self.grid[0].len(), self.grid.len())
+    }
 
-        #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-        struct PathNode {
-            cost: u64,
-            pos: Pos,
-        }
+    fn get(&self, pos: Pos) -> Option<char> {
+        self.grid
+            .iter()
+            .nth(pos.1)
+            .and_then(|row| row.iter().nth(pos.0).copied())
+    }
 
-        let mut next_to_process = BinaryHeap::new();
-        next_to_process.push(Reverse(PathNode {
-            cost: 0,
-            pos: self.start_pos,
-        }));
+    fn go_dir(&self, cur_node: PathNode, new_dir: Direction) -> Option<PathNode> {
+        let delta = match new_dir {
+            Direction::Up => (0, -1),
+            Direction::Down => (0, 1),
+            Direction::Left => (-1, 0),
+            Direction::Right => (1, 0),
+        };
 
-        while let Some(next_node) = next_to_process.pop() {
-            if visited.contains(&next_node.0.pos) {
-                continue;
+        let additional_cost = if cur_node.direction == new_dir {
+            0
+        } else {
+            match cur_node.direction {
+                Direction::Up => match new_dir {
+                    Direction::Up => 0,
+                    Direction::Down => 2000,
+                    Direction::Left => 1000,
+                    Direction::Right => 1000,
+                },
+                Direction::Down => match new_dir {
+                    Direction::Up => 2000,
+                    Direction::Down => 0,
+                    Direction::Left => 1000,
+                    Direction::Right => 1000,
+                },
+                Direction::Left => match new_dir {
+                    Direction::Up => 1000,
+                    Direction::Down => 1000,
+                    Direction::Left => 0,
+                    Direction::Right => 2000,
+                },
+                Direction::Right => match new_dir {
+                    Direction::Up => 1000,
+                    Direction::Down => 1000,
+                    Direction::Left => 2000,
+                    Direction::Right => 0,
+                },
             }
+        };
 
-            if next_node.0.pos.0 == self.end_pos.0 && next_node.0.pos.1 == self.end_pos.1 {
-                return next_node.0.cost;
-            }
-
-            visited.insert(next_node.0.pos);
-
-            fn consider_node(
-                next_to_process: &mut BinaryHeap<Reverse<PathNode>>,
-                visited: &HashSet<Pos>,
-                grid: &[Vec<char>],
-                pos: Option<Pos>,
-                cost: u64,
-            ) {
-                if let Some(pos) = pos {
-                    if grid[pos.1][pos.0] == '.' && !visited.contains(&pos) {
-                        next_to_process.push(Reverse(PathNode { cost, pos }));
-                    }
+        cur_node.pos.add(delta, self.bounds()).and_then(|pos| {
+            if let Some(ch) = self.get(pos) {
+                if ch == '.' {
+                    Some(PathNode {
+                        cost: cur_node.cost + 1 + additional_cost,
+                        pos,
+                        direction: new_dir,
+                        prev_pos: cur_node.pos,
+                    })
+                } else {
+                    None
                 }
+            } else {
+                None
             }
+        })
+    }
+}
 
-            consider_node(
-                &mut next_to_process,
-                &visited,
-                &self.grid,
-                next_node.0.pos.advance(bounds),
-                next_node.0.cost + 1,
-            );
-            consider_node(
-                &mut next_to_process,
-                &visited,
-                &self.grid,
-                Some(next_node.0.pos.rotate_left()),
-                next_node.0.cost + 1000,
-            );
-            consider_node(
-                &mut next_to_process,
-                &visited,
-                &self.grid,
-                Some(next_node.0.pos.rotate_right()),
-                next_node.0.cost + 1000,
-            );
+#[derive(Debug)]
+struct MinHeap<T>(BinaryHeap<Reverse<T>>);
+
+impl<T: std::cmp::Ord> FromIterator<T> for MinHeap<T> {
+    fn from_iter<U: IntoIterator<Item = T>>(iter: U) -> Self {
+        Self(iter.into_iter().map(|v| Reverse(v)).collect())
+    }
+}
+
+impl<T: std::cmp::Ord> MinHeap<T> {
+    fn pop(&mut self) -> Option<T> {
+        self.0.pop().map(|v| v.0)
+    }
+
+    fn push(&mut self, val: T) {
+        self.0.push(Reverse(val));
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct PathNode {
+    cost: usize,
+    pos: Pos,
+    direction: Direction,
+    prev_pos: Pos,
+}
+
+#[derive(Debug)]
+struct Parents {
+    cost: usize,
+    previous: HashSet<Pos>,
+}
+
+impl Default for Parents {
+    fn default() -> Self {
+        Self {
+            cost: usize::MAX,
+            previous: HashSet::new(),
         }
+    }
+}
 
-        /*
+impl Parents {
+    fn register(&mut self, candidate: &PathNode) -> bool {
+        match candidate.cost.cmp(&self.cost) {
+            std::cmp::Ordering::Greater => false,
+            std::cmp::Ordering::Equal => {
+                self.previous.insert(candidate.prev_pos);
+                true
+            }
+            std::cmp::Ordering::Less => {
+                self.previous.clear();
+                self.cost = candidate.cost;
+                self.previous.insert(candidate.prev_pos);
+                true
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum Solution {
+    Part1,
+    Part2,
+}
+
+fn solve(input: &str, solution: Solution) -> String {
+    let input = Map::parse_input(input);
+
+    // TODO: can type be removed?
+    let mut parents: HashMap<Pos, Parents> = HashMap::new();
+
+    let mut to_process = [PathNode {
+        cost: 0,
+        pos: input.start,
+        direction: Direction::Right,
+        prev_pos: input.start,
+    }]
+    .into_iter()
+    .collect::<MinHeap<_>>();
+
+    while let Some(current_node) = to_process.pop() {
+        if !parents
+            .entry(current_node.pos)
+            .or_default()
+            .register(&current_node)
         {
-            self.grid.iter().enumerate().for_each(|(y, row)| {
-                row.iter().enumerate().for_each(|(x, ch)| {
-                    print!(
-                        "{}",
-                        if [
-                            Pos(x, y, Direction::Up),
-                            Pos(x, y, Direction::Down),
-                            Pos(x, y, Direction::Left),
-                            Pos(x, y, Direction::Right),
-                        ]
-                        .into_iter()
-                        .any(|pos| visited.contains(&pos))
-                        {
-                            '$'
-                        } else {
-                            *ch
-                        }
-                    );
-                });
-                println!();
-            });
+            continue;
         }
-        */
 
-        panic!("cannot find a path, but input should always have a path");
+        [
+            Direction::Up,
+            Direction::Down,
+            Direction::Left,
+            Direction::Right,
+        ]
+        .into_iter()
+        .flat_map(|new_dir| input.go_dir(current_node, new_dir))
+        .collect::<Vec<_>>()
+        .into_iter()
+        .for_each(|path_node| {
+            to_process.push(path_node);
+        });
+    }
+
+    if solution == Solution::Part1 {
+        parents
+            .get(&input.end)
+            .expect("end is not blocked")
+            .cost
+            .to_string()
+    } else {
+        "".to_string()
     }
 }
 
 fn p1(input: &str) -> String {
-    Input::parse_input(input).simulate_p1().to_string()
+    solve(input, Solution::Part1)
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    solve(input, Solution::Part2)
 }
 
 fn main() {
